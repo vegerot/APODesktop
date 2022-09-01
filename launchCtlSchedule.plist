@@ -6,9 +6,15 @@
 	<dict>
 		<key>PATH</key>
 		<string>/usr/local/bin</string>
+		<key>NASA_API_KEY</key>
+		<string>$(NASA_API_KEY)</string>
 	</dict>
-	<key>RunAtLoaod</key>
+	<key>RunAtLoad</key>
 	<true/>
+	<key>StandardErrorPath</key>
+	<string>/tmp/apod.log</string>
+	<key>StandardOutPath</key>
+	<string>/tmp/apod.log</string>
 	<key>Label</key>
 	<string>com.coplan.max</string>
 	<key>ProgramArguments</key>

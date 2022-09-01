@@ -24,6 +24,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		E412A2C928C1379A004CD32B /* secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = secrets.xcconfig; sourceTree = "<group>"; };
 		E49A274928C1238700D4EC1E /* launchCtlSchedule.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = launchCtlSchedule.plist; sourceTree = "<group>"; };
 		E4D5D3B728C0127600C00156 /* APODesktop */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = APODesktop; sourceTree = BUILT_PRODUCTS_DIR; };
 		E4D5D3BA28C0127600C00156 /* APOD.swift */ = {isa = PBXFileReference; indentWidth = 2; lastKnownFileType = sourcecode.swift; path = APOD.swift; sourceTree = "<group>"; tabWidth = 2; usesTabs = 0; };
@@ -46,6 +47,7 @@
 			isa = PBXGroup;
 			children = (
 				E49A274928C1238700D4EC1E /* launchCtlSchedule.plist */,
+				E412A2C928C1379A004CD32B /* secrets.xcconfig */,
 				E4D5D3C228C0134900C00156 /* MyPlayground.playground */,
 				E4D5D3B928C0127600C00156 /* APODesktop */,
 				E4D5D3B828C0127600C00156 /* Products */,
@@ -141,7 +143,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 1;
 			shellPath = /bin/sh;
-			shellScript = "#if [ \"${CONFIGURATION}\" = \"Release\" ]; then\n    launchctl unload -w $SCRIPT_INPUT_FILE_0\n    launchctl load -w $SCRIPT_INPUT_FILE_0 || exit 1\n#fi\n";
+			shellScript = "if [ \"${CONFIGURATION}\" = \"Release\" ]; then\n    launchctl unload -w $SCRIPT_INPUT_FILE_0\n    launchctl load -w $SCRIPT_INPUT_FILE_0 || exit 1\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -160,6 +162,7 @@
 /* Begin XCBuildConfiguration section */
 		E4D5D3BC28C0127600C00156 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = E412A2C928C1379A004CD32B /* secrets.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -220,6 +223,7 @@
 		};
 		E4D5D3BD28C0127600C00156 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = E412A2C928C1379A004CD32B /* secrets.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;

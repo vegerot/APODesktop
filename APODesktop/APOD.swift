@@ -11,7 +11,11 @@ import Foundation
 @main
 struct APODesktop {
   static func main() async throws {
-    let _ = try await Main()
+    let res = try await Main()
+    switch res {
+    case .failure: let _ = try res.get()
+    default: break
+    }
   }
 }
 
@@ -22,7 +26,11 @@ func Main() async throws -> Result<Bool, ApodError> {
   /// shit happens (sometimes it's a video)
   let daysToLookBack = screens.count + 2
   let dateNDaysAgo: Date = .init(timeIntervalSinceNow: .init(-1 * daysToLookBack * 60 * 60 * 24))
-  let remoteImageURLs = try await getApodImageURLs(from: dateNDaysAgo)
+  guard let nasaApiKey = ProcessInfo.processInfo.environment["NASA_API_KEY"], nasaApiKey != ""
+  else {
+    return .failure(.badApiKey)
+  }
+  let remoteImageURLs = try await getApodImageURLs(from: dateNDaysAgo, usingApiKey: nasaApiKey)
 
   let workspace = NSWorkspace()
   let localImageURLs =
@@ -43,7 +51,7 @@ func Main() async throws -> Result<Bool, ApodError> {
   return .success(true)
 }
 
-func getApodImageURLs(from date: Date) async throws -> [URL] {
+func getApodImageURLs(from date: Date, usingApiKey apiKey: String) async throws -> [URL] {
   let dateFormatter: DateFormatter = .init()
   dateFormatter.locale = Locale(identifier: "en_US_POSIX")
   dateFormatter.dateFormat = "yyyy-MM-dd"
@@ -54,7 +62,7 @@ func getApodImageURLs(from date: Date) async throws -> [URL] {
     let apodURL = URL(
       string:
         // TODO: remove secret
-        "https://api.nasa.gov/planetary/apod?api_key=JvhDwQU1Uhv7yfaQTSqcsncZjwF5ZJR6McrzVE4f&start_date=\(apodDate)"
+        "https://api.nasa.gov/planetary/apod?api_key=\(apiKey)&start_date=\(apodDate)"
     )
   else {
     throw ApodError.badApiURL
@@ -74,6 +82,7 @@ enum ApodError: Error {
   case badApiURL
   case badImageURL
   case apiGetFailed
+  case badApiKey
 }
 
 struct ApodEntry: Codable {
