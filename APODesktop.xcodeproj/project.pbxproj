@@ -7,7 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		E4D5D3BB28C0127600C00156 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4D5D3BA28C0127600C00156 /* main.swift */; };
+		E4D5D3BB28C0127600C00156 /* APOD.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4D5D3BA28C0127600C00156 /* APOD.swift */; };
+		E4D5D3C428C0203300C00156 /* util.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4D5D3C328C0203300C00156 /* util.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -24,7 +25,9 @@
 
 /* Begin PBXFileReference section */
 		E4D5D3B728C0127600C00156 /* APODesktop */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = APODesktop; sourceTree = BUILT_PRODUCTS_DIR; };
-		E4D5D3BA28C0127600C00156 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		E4D5D3BA28C0127600C00156 /* APOD.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APOD.swift; sourceTree = "<group>"; };
+		E4D5D3C228C0134900C00156 /* MyPlayground.playground */ = {isa = PBXFileReference; lastKnownFileType = file.playground; path = MyPlayground.playground; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.swift; };
+		E4D5D3C328C0203300C00156 /* util.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = util.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -41,6 +44,7 @@
 		E4D5D3AE28C0127600C00156 = {
 			isa = PBXGroup;
 			children = (
+				E4D5D3C228C0134900C00156 /* MyPlayground.playground */,
 				E4D5D3B928C0127600C00156 /* APODesktop */,
 				E4D5D3B828C0127600C00156 /* Products */,
 			);
@@ -57,7 +61,8 @@
 		E4D5D3B928C0127600C00156 /* APODesktop */ = {
 			isa = PBXGroup;
 			children = (
-				E4D5D3BA28C0127600C00156 /* main.swift */,
+				E4D5D3BA28C0127600C00156 /* APOD.swift */,
+				E4D5D3C328C0203300C00156 /* util.swift */,
 			);
 			path = APODesktop;
 			sourceTree = "<group>";
@@ -120,7 +125,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				E4D5D3BB28C0127600C00156 /* main.swift in Sources */,
+				E4D5D3BB28C0127600C00156 /* APOD.swift in Sources */,
+				E4D5D3C428C0203300C00156 /* util.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
