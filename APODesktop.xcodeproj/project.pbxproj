@@ -141,7 +141,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 1;
 			shellPath = /bin/sh;
-			shellScript = "if [ \"${CONFIGURATION}\" = \"Release\" ]; then\n    launchctl unload -w $SCRIPT_INPUT_FILE_0\n    launchctl load -w $SCRIPT_INPUT_FILE_0 || exit 1\nfi\n";
+			shellScript = "#if [ \"${CONFIGURATION}\" = \"Release\" ]; then\n    launchctl unload -w $SCRIPT_INPUT_FILE_0\n    launchctl load -w $SCRIPT_INPUT_FILE_0 || exit 1\n#fi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
