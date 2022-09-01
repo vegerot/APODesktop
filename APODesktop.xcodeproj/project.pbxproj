@@ -79,7 +79,7 @@
 				E4D5D3B328C0127600C00156 /* Sources */,
 				E4D5D3B428C0127600C00156 /* Frameworks */,
 				E4D5D3B528C0127600C00156 /* CopyFiles */,
-				E49A274A28C12B2500D4EC1E /* ShellScript */,
+				E49A274A28C12B2500D4EC1E /* Run Script */,
 			);
 			buildRules = (
 			);
@@ -124,7 +124,7 @@
 /* End PBXProject section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		E49A274A28C12B2500D4EC1E /* ShellScript */ = {
+		E49A274A28C12B2500D4EC1E /* Run Script */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 8;
 			files = (
@@ -134,13 +134,14 @@
 			inputPaths = (
 				"$(SRCROOT)/launchCtlSchedule.plist",
 			);
+			name = "Run Script";
 			outputFileListPaths = (
 			);
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 1;
 			shellPath = /bin/sh;
-			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\nlaunchctl unload -w $SCRIPT_INPUT_FILE_0\nlaunchctl load -w $SCRIPT_INPUT_FILE_0 || exit 1\n";
+			shellScript = "if [ \"${CONFIGURATION}\" = \"Release\" ]; then\n    launchctl unload -w $SCRIPT_INPUT_FILE_0\n    launchctl load -w $SCRIPT_INPUT_FILE_0 || exit 1\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -277,7 +278,7 @@
 				DEPLOYMENT_LOCATION = YES;
 				DEPLOYMENT_POSTPROCESSING = YES;
 				DEVELOPMENT_TEAM = GWKJRP4KM9;
-				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_HARDENED_RUNTIME = NO;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 			};
