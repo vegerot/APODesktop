@@ -21,39 +21,44 @@ enum ApodError: Error {
 
 }
 
-func getApodURLs() async throws -> Result<[URL], ApodError> {
+func getApodImageURLs() async throws -> [URL] {
   guard
     let apodURL = URL(
       string:
-        "https://api.nasa.gov/planetary/apod?api_key=JvhDwQU1Uhv7yfaQTSqcsncZjwF5ZJR6McrzVE4f&start_date=2022-08-28"
+        "https://api.nasa.gov/planetary/apod?api_key=JvhDwQU1Uhv7yfaQTSqcsncZjwF5ZJR6McrzVE4f&start_date=2022-08-27"
     )
   else {
-    return .failure(.badApiURL)
+    throw ApodError.badApiURL
   }
-  let res: Result<(Data, URLResponse), ApodError> = await Result.init(catchingAsync: {
-    try await URLSession.shared.data(from: apodURL)
-  })
-  .mapError({ (err: Error) in ApodError.apiGetFailed })
+
+  let (apodData, _) = try await URLSession.shared.data(from: apodURL)
 
   let decoder = JSONDecoder()
-  let apodItems = Result { try decoder.decode([ApodEntry].self, from: res.get().0) }.map({
-    $0
-      .filter({ $0.media_type == .image }).map({ apod in apod.hdurl ?? apod.url })
-  })
+  let apodItems = try decoder.decode([ApodEntry].self, from: apodData)
+    .filter({ $0.media_type == .image }).map({ apod in apod.hdurl ?? apod.url })
 
   return apodItems
 }
 
 func stuff() async throws -> Result<Bool, ApodError> {
 
-  throw "hi"
-
+  let apodItems = try await getApodImageURLs()
   let screens = NSScreen.screens
-  let firstScreen = screens[0]
 
   let workspace = NSWorkspace()
-  let (localImageURL, _) = try await URLSession.shared.download(from: apodItems[0])
-  try workspace.setDesktopImageURL(localImageURL, for: firstScreen)
+  let localImageURLs =
+    try await apodItems
+    .concurrentCompactMap({ url in try await URLSession.shared.download(from: url).0 })
+
+  for (image, screen) in zip(localImageURLs, screens) {
+    try! workspace.setDesktopImageURL(
+      image, for: screen,
+      options: [
+        .allowClipping: NSNumber(true),
+        .imageScaling: NSNumber(value: NSImageScaling.scaleProportionallyUpOrDown.rawValue),
+      ])
+  }
+
   return .success(true)
 }
 
@@ -67,16 +72,5 @@ struct ApodEntry: Codable {
     case video
     // it would be nice to have an `unknown` default option
 
-  }
-}
-
-extension Result {
-  init(catchingAsync body: () async throws -> Success) async {
-    do {
-      self = .success(try await body())
-    } catch {
-      // TODO: remove force unwrap
-      self = .failure(error as! Failure)
-    }
   }
 }
