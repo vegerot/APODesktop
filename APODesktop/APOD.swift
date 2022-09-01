@@ -21,11 +21,17 @@ enum ApodError: Error {
 
 }
 
-func getApodImageURLs() async throws -> [URL] {
+func getApodImageURLs(from date: Date) async throws -> [URL] {
+  let dateFormatter: DateFormatter = .init()
+  dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+  dateFormatter.dateFormat = "yyyy-MM-dd"
+
+  let apodDate = dateFormatter.string(from: date.advanced(by: .init(-2 * (60 * 60 * 24))))
+
   guard
     let apodURL = URL(
       string:
-        "https://api.nasa.gov/planetary/apod?api_key=JvhDwQU1Uhv7yfaQTSqcsncZjwF5ZJR6McrzVE4f&start_date=2022-08-27"
+        "https://api.nasa.gov/planetary/apod?api_key=JvhDwQU1Uhv7yfaQTSqcsncZjwF5ZJR6McrzVE4f&start_date=\(apodDate)"
     )
   else {
     throw ApodError.badApiURL
@@ -42,13 +48,17 @@ func getApodImageURLs() async throws -> [URL] {
 
 func stuff() async throws -> Result<Bool, ApodError> {
 
-  let apodItems = try await getApodImageURLs()
   let screens = NSScreen.screens
+
+  let daysToLookBack = screens.count
+  let dateNDaysAgo: Date = .init(timeIntervalSinceNow: .init(-1 * daysToLookBack * 60 * 60 * 24))
+  let apodItems = try await getApodImageURLs(from: dateNDaysAgo)
 
   let workspace = NSWorkspace()
   let localImageURLs =
     try await apodItems
     .concurrentCompactMap({ url in try await URLSession.shared.download(from: url).0 })
+    .reversed()
 
   for (image, screen) in zip(localImageURLs, screens) {
     try! workspace.setDesktopImageURL(
