@@ -7,7 +7,7 @@
 		<key>PATH</key>
 		<string>/usr/local/bin</string>
 	</dict>
-	<key>RunAtLoaod</key>
+	<key>RunAtLoad</key>
 	<true/>
 	<key>Label</key>
 	<string>com.coplan.max</string>
