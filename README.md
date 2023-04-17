@@ -8,6 +8,10 @@
 ```sh
 xcodebuild -scheme APODesktop -project APODesktop.xcodeproj -configuration Release CONFIGURATION_BUILD_DIR=./build 
 ```
+or
+```sh
+xcodebuild -target APODesktop -project APODesktop.xcodeproj -configuration Release CONFIGURATION_BUILD_DIR=./build
+```
 2. you can manually update your wallpaper by running `build/APODesktop` or wait until 10:00am 
 
 If you would rather manually update your wallpaper you can run
