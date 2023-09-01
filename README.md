@@ -4,34 +4,37 @@
 
 ### CLI
 
+There are several ways to build APODesktop.  The simplest is by running `make`
+
 1. simply run
+
 ```sh
-make
+make install
 ```
-2.
+
+You can also build APODesktop with Xcode at your peril
+
+1.
+
 ```sh
 xcodebuild -scheme APODesktop -project APODesktop.xcodeproj -configuration Release CONFIGURATION_BUILD_DIR=./build
 ```
+
 or
+
 ```sh
 xcodebuild -target APODesktop -project APODesktop.xcodeproj -configuration Release CONFIGURATION_BUILD_DIR=./build
 ```
-3. you can manually update your wallpaper by running `build/APODesktop` or wait until 10:00am
 
-If you would rather manually update your wallpaper you can run
-```sh
-swiftc APODesktop/*
-```
-and run `./main`
+Now your wallpaper will be automatically updated every morning at 10:00AM!
+
+You can also manually update your wallpaper at any time by running `apodesktop`
 
 ### Xcode
 
 1. Click run button
 2. Profit???
 
-
-## other
+## other operating systems
 
 lul stop being poor
-
-
