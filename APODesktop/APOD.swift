@@ -60,7 +60,17 @@ func getApodImageURLs(from date: Date) async throws -> [URL] {
     throw ApodError.badApiURL
   }
 
-  let (apodData, _) = try await URLSession.shared.data(from: apodURL)
+  let (apodData, response) = try await URLSession.shared.data(from: apodURL)
+  if let httpResponse = response as? HTTPURLResponse {
+    if httpResponse.statusCode >= 300 {
+      throw ApodError.apiGetFailed(
+        message:
+          "bad status code while fetching list of imagess from NASA: \(httpResponse.statusCode)"
+      )
+    }
+  } else {
+    throw ApodError.apiGetFailed(message: "bad response from NASA while fetching list of images")
+  }
 
   let decoder = JSONDecoder()
   let apodItems = try decoder.decode([ApodEntry].self, from: apodData)
@@ -73,7 +83,17 @@ func getApodImageURLs(from date: Date) async throws -> [URL] {
 enum ApodError: Error {
   case badApiURL
   case badImageURL
-  case apiGetFailed
+  case apiGetFailed(message: String)
+}
+
+extension ApodError: CustomStringConvertible {
+  var description: String {
+    switch self {
+    case .badApiURL: return "API URL is bad"
+    case .badImageURL: return "Image URL is bad"
+    case .apiGetFailed(let message): return message
+    }
+  }
 }
 
 struct ApodEntry: Codable {
