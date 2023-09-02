@@ -4,34 +4,35 @@ using System.Net;
 using System.Runtime.InteropServices;
 
 const int SPI_SETDESKWALLPAPER = 20;
- const int SPIF_UPDATEINIFILE = 0x01;
-[DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError =true)]
+const int SPIF_UPDATEINIFILE = 0x01;
+[DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
 static extern int SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni);
 
-async Task<int> SetWallpaperAsync(string wallpaperUrl)
+HRESULT SetWallpaperAsync(string wallpaperUrl)
 {
     String downloadedFileName = "paper.jpeg";
     new WebClient().DownloadFile(wallpaperUrl, downloadedFileName);
 
- 
+
     IDesktopWallpaper pDesktopWallpaper = (IDesktopWallpaper)(new DesktopWallpaperClass());
-    String monitor = "";
-    pDesktopWallpaper.GetMonitorDevicePathAt(0, monitor);
     String pathOfFile = System.IO.Directory.GetCurrentDirectory() + "\\" + downloadedFileName;
+    String monitor = null;
+    pDesktopWallpaper.GetMonitorDevicePathAt(1, ref monitor);
+    Console.WriteLine($"monitor: {monitor}");
 
-    return (int)pDesktopWallpaper.SetWallpaper(monitor, pathOfFile);
+    return pDesktopWallpaper.SetWallpaper(monitor, pathOfFile);
 
-
-    // TODO: try using IDesktopWallpaper::SetWallpaper instead
 }
+IDesktopWallpaper pDesktopWallpaper = (IDesktopWallpaper)(new DesktopWallpaperClass());
+String monitor = "";
+bool is_every_monitor_using_the_same_image = pDesktopWallpaper.GetWallpaper(0, monitor) == HRESULT.S_OK;
+Console.WriteLine($"is_every_monitor_using_the_same_image: {is_every_monitor_using_the_same_image}\nmaybe_monitor: {monitor}");
 
-return await SetWallpaperAsync("https://apod.nasa.gov/apod/image/2308/Pacman_Stocks_2560.jpg");
+return (int)SetWallpaperAsync("https://apod.nasa.gov/apod/image/2308/M31Perseid_Pedrero_3232.jpg");
 
 
-
-
-        [StructLayout(LayoutKind.Sequential)]
-        public struct RECT
+[StructLayout(LayoutKind.Sequential)]
+public struct RECT
 {
     public int left;
     public int top;
@@ -53,7 +54,7 @@ return await SetWallpaperAsync("https://apod.nasa.gov/apod/image/2308/Pacman_Sto
 interface IDesktopWallpaper
 {
     HRESULT SetWallpaper([MarshalAs(UnmanagedType.LPWStr)] string monitorID, [MarshalAs(UnmanagedType.LPWStr)] string wallpaper);
-    HRESULT GetWallpaper([MarshalAs(UnmanagedType.LPWStr)] string monitorID, [MarshalAs(UnmanagedType.LPWStr)] ref string wallpaper);
+    HRESULT GetWallpaper(int monitorID, [MarshalAs(UnmanagedType.LPWStr)] ref string wallpaper);
     HRESULT GetMonitorDevicePathAt(uint monitorIndex, [MarshalAs(UnmanagedType.LPWStr)] ref string monitorID);
     HRESULT GetMonitorDevicePathCount(ref uint count);
     HRESULT GetMonitorRECT([MarshalAs(UnmanagedType.LPWStr)] string monitorID, [MarshalAs(UnmanagedType.Struct)] ref RECT displayRect);
