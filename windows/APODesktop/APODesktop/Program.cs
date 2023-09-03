@@ -7,10 +7,13 @@ using System.Runtime.InteropServices;
 return main();
 int main()
 {
-    List<String> apodImageURL = getApodImageURLs();
-    String firstApodImageURL = apodImageURL[0];
+    List<URL> apodImageURLs = getApodImageURLs();
+    List<FilePath> pathsToImages = downloadImagesAtUrls(apodImageURLs);
 
-    HRESULT set_wallpaper_result = SetWallpaperAsync(firstApodImageURL);
+
+    FilePath firstFilePath = pathsToImages.First();
+
+    HRESULT set_wallpaper_result = SetWallpaper(firstFilePath);
 
     switch (set_wallpaper_result)
     {
@@ -33,27 +36,66 @@ int main()
     return (int)set_wallpaper_result;
 }
 
-List<String> getApodImageURLs()
+List<URL> getApodImageURLs()
 {
-    List<string> urls = new List<string>();
-    urls.Add("https://apod.nasa.gov/apod/image/2309/268_lorand_fenyes_iris_ngc7023.jpg");
+    List<URL> urls = new List<URL>();
+    urls.Add(new URL("https://apod.nasa.gov/apod/image/2308/Crew_7_Nebula_Seeley-1.jpg"));
     return urls;
 }
 
-HRESULT SetWallpaperAsync(string wallpaperUrl)
+List<FilePath> downloadImagesAtUrls(List<URL> urls)
 {
-    String downloadedFileName = "paper.jpeg";
-    new WebClient().DownloadFile(wallpaperUrl, downloadedFileName);
+    List<FilePath> images = new List<FilePath>();
+    {
+        URL firstUrl = urls[0];
+        String downloadedImageName = "wallpaper1.jpeg";
+        new WebClient().DownloadFile(firstUrl.ToString(), downloadedImageName);
+        FilePath pathToDownloadedImage = new FilePath(Directory.GetCurrentDirectory() + "\\" + downloadedImageName);
+        images.Add(pathToDownloadedImage);
+    }
+    return images;
 
+}
 
+HRESULT SetWallpaper(FilePath pathToWallpaper)
+{
     IDesktopWallpaper pDesktopWallpaper = (IDesktopWallpaper)(new DesktopWallpaperClass());
-    String pathOfFile = System.IO.Directory.GetCurrentDirectory() + "\\" + downloadedFileName;
     String monitor = null;
-    Debug.Assert(pDesktopWallpaper.GetMonitorDevicePathAt(1, ref monitor)==HRESULT.S_OK);
+    Debug.Assert(pDesktopWallpaper.GetMonitorDevicePathAt(1, ref monitor) == HRESULT.S_OK);
     Debug.Assert(monitor != null);
 
-    return pDesktopWallpaper.SetWallpaper(monitor, pathOfFile);
+    return pDesktopWallpaper.SetWallpaper(monitor, pathToWallpaper.ToString());
 
+}
+
+class FilePath
+{
+    private readonly String _string;
+
+    public FilePath(string path)
+    {
+        this._string = path;
+    }
+
+    override public String ToString()
+    {
+        return this._string;
+    }
+}
+
+class URL
+{
+    private readonly String _string;
+
+    public URL(string url)
+    {
+        this._string = url;
+    }
+
+    override public String ToString()
+    {
+        return this._string;
+    }
 }
 
 /**IGNORE EVERYTHING PAST HERE */
