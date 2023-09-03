@@ -8,7 +8,6 @@ using MonitorID = System.String;
 return main();
 int main()
 {
-
     List<MonitorID> monitors = getScreens();
 
     int number_of_monitors = monitors.Count;
@@ -22,7 +21,6 @@ int main()
     SetTheseWallpapersToTheseImages(monitors, pathsToImages);
 
     return 0;
-
 }
 
 List<MonitorID> getScreens()
