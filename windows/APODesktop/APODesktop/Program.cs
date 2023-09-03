@@ -34,28 +34,29 @@ int main()
 
 List<URL> getApodImageURLs()
 {
-Uri nasa_api_url = new("https://api.nasa.gov/planetary/apod?api_key=JvhDwQU1Uhv7yfaQTSqcsncZjwF5ZJR6McrzVE4f");
+    Uri nasa_api_url = new("https://api.nasa.gov/planetary/apod?api_key=JvhDwQU1Uhv7yfaQTSqcsncZjwF5ZJR6McrzVE4f&start_date=2023-09-01");
 
     using HttpClient httpClient = new()
     {
         BaseAddress = nasa_api_url,
     };
 
-    ApodGetPicsResponse apod_response = httpClient.GetFromJsonAsync<ApodGetPicsResponse>("").Result;
+    List<ApodGetPicsResponse> apod_response = httpClient.GetFromJsonAsync<List<ApodGetPicsResponse>>("").Result;
     Debug.Assert(apod_response != null);
 
     List<URL> urls = new();
 
+    foreach (var apod in apod_response)
     {
-        if (apod_response.media_type != "image")
+        if (apod.media_type != "image")
         {
-            // TODO: skip
+            continue;
         }
-        String image_url = apod_response.hdurl ?? apod_response.url;
+        String image_url = apod.hdurl ?? apod.url;
 
         urls.Add(new URL(image_url));
     }
-    
+
     return urls;
 }
 
@@ -63,7 +64,7 @@ List<FilePath> downloadImagesAtUrls(List<URL> urls)
 {
     List<FilePath> images = new();
     {
-        URL firstUrl = urls[0];
+        URL firstUrl = urls.First();
         String downloadedImageName = "wallpaper1.jpeg";
         FilePath pathToDownloadedImage = new(GetTemporaryDirectory() + "\\" + downloadedImageName);
         new WebClient().DownloadFile(firstUrl.ToString(), pathToDownloadedImage.ToString());
