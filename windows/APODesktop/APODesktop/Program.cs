@@ -7,11 +7,15 @@ using System.Runtime.InteropServices;
 return main();
 int main()
 {
-    HRESULT set_wallpaper_result = SetWallpaperAsync("https://apod.nasa.gov/apod/image/2308/rollcloud_hanrahan_3072.jpg");
+    List<String> apodImageURL = getApodImageURLs();
+    String firstApodImageURL = apodImageURL[0];
+
+    HRESULT set_wallpaper_result = SetWallpaperAsync(firstApodImageURL);
 
     switch (set_wallpaper_result)
     {
         case HRESULT.S_OK:
+            Console.WriteLine("s'all good homie");
             break;
         case HRESULT.S_FALSE:
             Console.Error.WriteLine("setting wallpaper return S_FALSE (whatever that means)");
@@ -26,9 +30,15 @@ int main()
             Console.Error.WriteLine("setting wallpaper return E_NOTIMPL (whatever that means)");
             break;
     }
-    return 0;
+    return (int)set_wallpaper_result;
 }
 
+List<String> getApodImageURLs()
+{
+    List<string> urls = new List<string>();
+    urls.Add("https://apod.nasa.gov/apod/image/2309/268_lorand_fenyes_iris_ngc7023.jpg");
+    return urls;
+}
 
 HRESULT SetWallpaperAsync(string wallpaperUrl)
 {
