@@ -3,19 +3,23 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Runtime.InteropServices;
 
+using MonitorID = System.String;
 
 return main();
 int main()
 {
-    int number_of_monitors = 2;
+
+    List<MonitorID> monitors = getScreens();
+
+    int number_of_monitors = monitors.Count;
 
     /// shit happens (sometimes it's a video)
     int number_of_days_to_look_back = number_of_monitors + 2;
     DateOnly date_n_days_ago = DateOnly.FromDateTime(DateTime.Now.AddDays(-1 * number_of_days_to_look_back));
     List<URL> apodImageURLs = getApodImageURLs(date_n_days_ago);
-    List<FilePath> pathsToImages = downloadImagesAtUrls(apodImageURLs);
+    List<FilePath> pathsToImages = downloadImagesAtUrls(apodImageURLs.Take(number_of_monitors).ToList());
 
-    HRESULT set_wallpaper_result = SetAllWallpapersToTheseImages(pathsToImages);
+    HRESULT set_wallpaper_result = SetTheseWallpapersToTheseImages(pathsToImages);
 
     switch (set_wallpaper_result)
     {
@@ -35,6 +39,25 @@ int main()
             break;
     }
     return (int)set_wallpaper_result;
+}
+
+List<MonitorID> getScreens()
+{
+    IDesktopWallpaper pDesktopWallpaper = (IDesktopWallpaper)(new DesktopWallpaperClass());
+    uint monitor_count = 0;
+    pDesktopWallpaper.GetMonitorDevicePathCount(ref monitor_count);
+    Debug.Assert(monitor_count > 0);
+
+    List<MonitorID> screens = new List<MonitorID>();
+    for (uint i = 0; i < monitor_count; ++i)
+    {
+        MonitorID monitor = null;
+        Debug.Assert(pDesktopWallpaper.GetMonitorDevicePathAt(i, ref monitor) == HRESULT.S_OK);
+        Debug.Assert(monitor != null);
+        screens.Add(monitor);
+    }
+    return screens;
+
 }
 
 List<URL> getApodImageURLs(DateOnly since)
@@ -89,7 +112,7 @@ string GetTemporaryDirectory()
     return tempDirectory;
 }
 
-HRESULT SetAllWallpapersToTheseImages(List<FilePath> pathsToWallpapers)
+HRESULT SetTheseWallpapersToTheseImages(List<FilePath> pathsToWallpapers)
 {
     IDesktopWallpaper pDesktopWallpaper = (IDesktopWallpaper)(new DesktopWallpaperClass());
     FilePath firstWallpaper = pathsToWallpapers.First();
