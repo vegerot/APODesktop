@@ -15,7 +15,6 @@ int main()
     switch (set_wallpaper_result)
     {
         case HRESULT.S_OK:
-            Console.WriteLine("s'all good homie");
             break;
         case HRESULT.S_FALSE:
             Console.Error.WriteLine("setting wallpaper return S_FALSE (whatever that means)");
@@ -67,12 +66,18 @@ List<FilePath> downloadImagesAtUrls(List<URL> urls)
     {
         URL firstUrl = urls[0];
         String downloadedImageName = "wallpaper1.jpeg";
-        new WebClient().DownloadFile(firstUrl.ToString(), downloadedImageName);
-        FilePath pathToDownloadedImage = new FilePath(Directory.GetCurrentDirectory() + "\\" + downloadedImageName);
+        FilePath pathToDownloadedImage = new FilePath(GetTemporaryDirectory() + "\\" + downloadedImageName);
+        new WebClient().DownloadFile(firstUrl.ToString(), pathToDownloadedImage.ToString());
         images.Add(pathToDownloadedImage);
     }
     return images;
+}
 
+string GetTemporaryDirectory()
+{
+    string tempDirectory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+    Directory.CreateDirectory(tempDirectory);
+    return tempDirectory;
 }
 
 HRESULT SetAllWallpapersToTheseImages(List<FilePath> pathsToWallpapers)
