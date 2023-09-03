@@ -69,11 +69,14 @@ List<URL> getApodImageURLs(DateOnly since)
 List<FilePath> downloadImagesAtUrls(List<URL> urls)
 {
     List<FilePath> images = new();
+    var tempDirectory = GetTemporaryDirectory();
+    for (int i = 0; i < urls.Count; ++i)
     {
-        URL firstUrl = urls.First();
-        String downloadedImageName = "wallpaper1.jpeg";
-        FilePath pathToDownloadedImage = new(GetTemporaryDirectory() + "\\" + downloadedImageName);
-        new WebClient().DownloadFile(firstUrl.ToString(), pathToDownloadedImage.ToString());
+        URL url = urls[i];
+        String downloadedImageName = $"{i}.jpeg";
+        FilePath pathToDownloadedImage = new(tempDirectory + "\\" + downloadedImageName);
+        // TODO: Download pictures in parallel.  Maybe `HttpClient` instead of `WebClient`?
+        new WebClient().DownloadFile(url.ToString(), pathToDownloadedImage.ToString());
         images.Add(pathToDownloadedImage);
     }
     return images;
