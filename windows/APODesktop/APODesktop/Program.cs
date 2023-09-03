@@ -1,12 +1,34 @@
 ﻿
-using System.Drawing;
+using System.Diagnostics;
 using System.Net;
 using System.Runtime.InteropServices;
 
-const int SPI_SETDESKWALLPAPER = 20;
-const int SPIF_UPDATEINIFILE = 0x01;
-[DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-static extern int SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni);
+
+return main();
+int main()
+{
+    HRESULT set_wallpaper_result = SetWallpaperAsync("https://apod.nasa.gov/apod/image/2308/rollcloud_hanrahan_3072.jpg");
+
+    switch (set_wallpaper_result)
+    {
+        case HRESULT.S_OK:
+            break;
+        case HRESULT.S_FALSE:
+            Console.Error.WriteLine("setting wallpaper return S_FALSE (whatever that means)");
+            break;
+        case HRESULT.E_FAIL:
+            Console.Error.WriteLine("setting wallpaper return E_FAIL (whatever that means)");
+            break;
+        case HRESULT.E_NOINTERFACE:
+            Console.Error.WriteLine("setting wallpaper return E_NOINTERFACE (whatever that means)");
+            break;
+        case HRESULT.E_NOTIMPL:
+            Console.Error.WriteLine("setting wallpaper return E_NOTIMPL (whatever that means)");
+            break;
+    }
+    return 0;
+}
+
 
 HRESULT SetWallpaperAsync(string wallpaperUrl)
 {
@@ -17,18 +39,14 @@ HRESULT SetWallpaperAsync(string wallpaperUrl)
     IDesktopWallpaper pDesktopWallpaper = (IDesktopWallpaper)(new DesktopWallpaperClass());
     String pathOfFile = System.IO.Directory.GetCurrentDirectory() + "\\" + downloadedFileName;
     String monitor = null;
-    pDesktopWallpaper.GetMonitorDevicePathAt(1, ref monitor);
-    Console.WriteLine($"monitor: {monitor}");
+    Debug.Assert(pDesktopWallpaper.GetMonitorDevicePathAt(1, ref monitor)==HRESULT.S_OK);
+    Debug.Assert(monitor != null);
 
     return pDesktopWallpaper.SetWallpaper(monitor, pathOfFile);
 
 }
-IDesktopWallpaper pDesktopWallpaper = (IDesktopWallpaper)(new DesktopWallpaperClass());
-String monitor = "";
-bool is_every_monitor_using_the_same_image = pDesktopWallpaper.GetWallpaper(0, monitor) == HRESULT.S_OK;
-Console.WriteLine($"is_every_monitor_using_the_same_image: {is_every_monitor_using_the_same_image}\nmaybe_monitor: {monitor}");
 
-return (int)SetWallpaperAsync("https://apod.nasa.gov/apod/image/2308/M31Perseid_Pedrero_3232.jpg");
+/**IGNORE EVERYTHING PAST HERE */
 
 
 [StructLayout(LayoutKind.Sequential)]
