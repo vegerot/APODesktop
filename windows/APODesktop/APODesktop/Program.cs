@@ -4,16 +4,14 @@ using System.Net;
 using System.Runtime.InteropServices;
 
 
+
 return main();
 int main()
 {
     List<URL> apodImageURLs = getApodImageURLs();
     List<FilePath> pathsToImages = downloadImagesAtUrls(apodImageURLs);
 
-
-    FilePath firstFilePath = pathsToImages.First();
-
-    HRESULT set_wallpaper_result = SetWallpaper(firstFilePath);
+    HRESULT set_wallpaper_result = SetAllWallpapersToTheseImages(pathsToImages);
 
     switch (set_wallpaper_result)
     {
@@ -57,14 +55,15 @@ List<FilePath> downloadImagesAtUrls(List<URL> urls)
 
 }
 
-HRESULT SetWallpaper(FilePath pathToWallpaper)
+HRESULT SetAllWallpapersToTheseImages(List<FilePath> pathsToWallpapers)
 {
     IDesktopWallpaper pDesktopWallpaper = (IDesktopWallpaper)(new DesktopWallpaperClass());
+    FilePath firstWallpaper = pathsToWallpapers.First();
     String monitor = null;
     Debug.Assert(pDesktopWallpaper.GetMonitorDevicePathAt(1, ref monitor) == HRESULT.S_OK);
     Debug.Assert(monitor != null);
 
-    return pDesktopWallpaper.SetWallpaper(monitor, pathToWallpaper.ToString());
+    return pDesktopWallpaper.SetWallpaper(monitor, firstWallpaper.ToString());
 
 }
 
