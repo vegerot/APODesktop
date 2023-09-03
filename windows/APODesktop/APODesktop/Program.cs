@@ -19,26 +19,10 @@ int main()
     List<URL> apodImageURLs = getApodImageURLs(date_n_days_ago);
     List<FilePath> pathsToImages = downloadImagesAtUrls(apodImageURLs.Take(number_of_monitors).ToList());
 
-    HRESULT set_wallpaper_result = SetTheseWallpapersToTheseImages(pathsToImages);
+    SetTheseWallpapersToTheseImages(monitors, pathsToImages);
 
-    switch (set_wallpaper_result)
-    {
-        case HRESULT.S_OK:
-            break;
-        case HRESULT.S_FALSE:
-            Console.Error.WriteLine("setting wallpaper return S_FALSE (whatever that means)");
-            break;
-        case HRESULT.E_FAIL:
-            Console.Error.WriteLine("setting wallpaper return E_FAIL (whatever that means)");
-            break;
-        case HRESULT.E_NOINTERFACE:
-            Console.Error.WriteLine("setting wallpaper return E_NOINTERFACE (whatever that means)");
-            break;
-        case HRESULT.E_NOTIMPL:
-            Console.Error.WriteLine("setting wallpaper return E_NOTIMPL (whatever that means)");
-            break;
-    }
-    return (int)set_wallpaper_result;
+    return 0;
+
 }
 
 List<MonitorID> getScreens()
@@ -112,15 +96,15 @@ string GetTemporaryDirectory()
     return tempDirectory;
 }
 
-HRESULT SetTheseWallpapersToTheseImages(List<FilePath> pathsToWallpapers)
+void SetTheseWallpapersToTheseImages(List<MonitorID> monitors, List<FilePath> pathsToWallpapers)
 {
     IDesktopWallpaper pDesktopWallpaper = (IDesktopWallpaper)(new DesktopWallpaperClass());
-    FilePath firstWallpaper = pathsToWallpapers.First();
-    String monitor = null;
-    Debug.Assert(pDesktopWallpaper.GetMonitorDevicePathAt(1, ref monitor) == HRESULT.S_OK);
-    Debug.Assert(monitor != null);
+    foreach (var (monitor, image) in monitors.Zip(pathsToWallpapers))
+    {
 
-    return pDesktopWallpaper.SetWallpaper(monitor, firstWallpaper.ToString());
+        Debug.Assert(pDesktopWallpaper.SetWallpaper(monitor, image.ToString()) == HRESULT.S_OK);
+
+    }
 
 }
 
