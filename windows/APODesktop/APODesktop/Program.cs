@@ -7,7 +7,12 @@ using System.Runtime.InteropServices;
 return main();
 int main()
 {
-    List<URL> apodImageURLs = getApodImageURLs();
+    int number_of_monitors = 2;
+
+    /// shit happens (sometimes it's a video)
+    int number_of_days_to_look_back = number_of_monitors + 2;
+    DateOnly date_n_days_ago = DateOnly.FromDateTime(DateTime.Now.AddDays(-1 * number_of_days_to_look_back));
+    List<URL> apodImageURLs = getApodImageURLs(date_n_days_ago);
     List<FilePath> pathsToImages = downloadImagesAtUrls(apodImageURLs);
 
     HRESULT set_wallpaper_result = SetAllWallpapersToTheseImages(pathsToImages);
@@ -32,9 +37,10 @@ int main()
     return (int)set_wallpaper_result;
 }
 
-List<URL> getApodImageURLs()
+List<URL> getApodImageURLs(DateOnly since)
 {
-    Uri nasa_api_url = new("https://api.nasa.gov/planetary/apod?api_key=JvhDwQU1Uhv7yfaQTSqcsncZjwF5ZJR6McrzVE4f&start_date=2023-09-01");
+    string formattedDate = since.ToString("yyyy-MM-dd");
+    Uri nasa_api_url = new($"https://api.nasa.gov/planetary/apod?api_key=JvhDwQU1Uhv7yfaQTSqcsncZjwF5ZJR6McrzVE4f&start_date={formattedDate}");
 
     using HttpClient httpClient = new()
     {
