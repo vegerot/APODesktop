@@ -1,8 +1,7 @@
-﻿
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Net;
+using System.Net.Http.Json;
 using System.Runtime.InteropServices;
-
 
 
 return main();
@@ -36,9 +35,30 @@ int main()
 
 List<URL> getApodImageURLs()
 {
+Uri nasa_api_url = new("https://api.nasa.gov/planetary/apod?api_key=JvhDwQU1Uhv7yfaQTSqcsncZjwF5ZJR6McrzVE4f");
+
+    HttpClient httpClient = new HttpClient()
+    {
+        BaseAddress = nasa_api_url,
+    };
+
+    ApodGetPicsResponse apod_response = httpClient.GetFromJsonAsync<ApodGetPicsResponse>("").Result;
+    Debug.Assert(apod_response != null);
+
     List<URL> urls = new List<URL>();
-    urls.Add(new URL("https://apod.nasa.gov/apod/image/2308/Crew_7_Nebula_Seeley-1.jpg"));
+
+    {
+        if (apod_response.media_type != "image")
+        {
+            // TODO: skip
+        }
+        String image_url = apod_response.hdurl ?? apod_response.url;
+
+        urls.Add(new URL(image_url));
+    }
+    
     return urls;
+
 }
 
 List<FilePath> downloadImagesAtUrls(List<URL> urls)
@@ -96,6 +116,8 @@ class URL
         return this._string;
     }
 }
+
+record class ApodGetPicsResponse(string media_type, string url, string? hdurl);
 
 /**IGNORE EVERYTHING PAST HERE */
 
