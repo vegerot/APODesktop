@@ -35,6 +35,26 @@ You can also manually update your wallpaper at any time by running `apodesktop`
 1. Click run button
 2. Profit???
 
-## other operating systems
+## Windows
+
+1. Open Developer Powershell (Powershell with `msbuild`)
+2. run
+
+```pwsh
+sl windows\APODesktop
+msbuild .
+.\scheduleApodDaily.ps1
+```
+
+3. Profit?
+
+### Uninstallation
+
+1. Open Task Scheduler
+2. On the left-hand sidebar click "Task Scheduler Library"
+3. Right-click "APOD-Update Wallpaper daily"
+4. Click "delete"
+
+## GNU+Linux
 
 lul stop being poor
