@@ -9,7 +9,7 @@ There are several ways to build APODesktop.  The simplest is by running `make`
 1. simply run
 
 ```sh
-make install
+$ make install
 ```
 
 You can also build APODesktop with Xcode at your peril
@@ -17,13 +17,13 @@ You can also build APODesktop with Xcode at your peril
 1.
 
 ```sh
-xcodebuild -scheme APODesktop -project APODesktop.xcodeproj -configuration Release CONFIGURATION_BUILD_DIR=./build
+$ xcodebuild -scheme APODesktop -project APODesktop.xcodeproj -configuration Release CONFIGURATION_BUILD_DIR=./build
 ```
 
 or
 
 ```sh
-xcodebuild -target APODesktop -project APODesktop.xcodeproj -configuration Release CONFIGURATION_BUILD_DIR=./build
+$ xcodebuild -target APODesktop -project APODesktop.xcodeproj -configuration Release CONFIGURATION_BUILD_DIR=./build
 ```
 
 Now your wallpaper will be automatically updated every morning at 10:00AM!
@@ -41,9 +41,9 @@ You can also manually update your wallpaper at any time by running `apodesktop`
 2. run
 
 ```pwsh
-sl windows\APODesktop
-msbuild .
-.\scheduleApodDaily.ps1
+$ sl windows\APODesktop
+$ msbuild .
+$ .\scheduleApodDaily.ps1
 ```
 
 3. Profit?
