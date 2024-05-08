@@ -58,3 +58,8 @@ $ .\scheduleApodDaily.ps1
 ## GNU+Linux
 
 lul stop being poor
+
+
+## TODO
+
+- detect when the user plugs in a new monitor and update the wallpaper
