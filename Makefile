@@ -6,10 +6,12 @@ PREFIX ?= /usr/local
 $(PREFIX)/bin/apodesktop: build/apodesktop
 	cp ./build/apodesktop $(PREFIX)/bin
 
+LAUNCHAGENTS=~/Library/LaunchAgents
 PLIST=./launchCtlSchedule.plist
 install: build/apodesktop $(PREFIX)/bin/apodesktop
-	launchctl unload -w $(PLIST)
-	launchctl load -w $(PLIST)
+	launchctl unload -w $(LAUNCHAGENTS)/$(PLIST)
+	install $(PLIST) ~/Library/LaunchAgents
+	launchctl load -w $(LAUNCHAGENTS)/$(PLIST)
 	$(PREFIX)/bin/apodesktop
 
 clean:
