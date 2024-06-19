@@ -1,0 +1,73 @@
+#!/usr/bin/env python
+
+import datetime
+import os
+import requests
+import tempfile
+
+
+def getNumberOfMonitors():
+    xrandrOutput = os.popen("xrandr").read()
+    number_of_monitors = xrandrOutput.count(" connected")
+    return number_of_monitors
+
+
+def getAPODImageURLs(date, number_of_days_to_look_back):
+    dateToCheck = date - datetime.timedelta(days=number_of_days_to_look_back)
+    formattedDate = dateToCheck.strftime("%Y-%m-%d")
+    print('Checking APOD for date: ' + formattedDate)
+    apodURL = f"https://api.nasa.gov/planetary/apod?api_key=JvhDwQU1Uhv7yfaQTSqcsncZjwF5ZJR6McrzVE4f&start_date={formattedDate}"
+    response = requests.get(apodURL)
+    assert response.status_code == 200, "Failed to get APOD"
+    responseJSON = response.json()
+    print(responseJSON)
+    assert isinstance(responseJSON, list), "APOD response is not a list"
+    apodImageURLs = [entry['hdurl'] or entry['url'] for entry in responseJSON if entry['media_type'] == 'image']
+    assert len(apodImageURLs) > 0, 'No APOD images found2'
+    print('Found APOD image URLs: ', apodImageURLs)
+
+    return apodImageURLs
+
+
+def downloadImages(apodImageURLs):
+    tempDir = tempfile.mkdtemp()
+    pathsToImages = []
+    for apodImageURL in apodImageURLs:
+        response = requests.get(apodImageURL)
+        with open(tempDir + "/" + apodImageURL.split("/")[-1], "wb") as f:
+            f.write(response.content)
+        pathsToImages.append(tempDir + '/' + apodImageURL.split('/')[-1])
+    return pathsToImages
+
+
+def setWallpaper(pathsToImages ):
+    print('Setting wallpaper to: ', pathsToImages)
+    os.system('feh --bg-fill ' + ' '.join(pathsToImages))
+
+def main():
+    number_of_monitors = getNumberOfMonitors()
+    print('Number of monitors: ' + str(number_of_monitors))
+
+    assert number_of_monitors > 0, "No monitors detected"
+
+    # look back two extra days in case the APOD is a video
+    number_of_days_to_look_back = number_of_monitors + 2
+
+    apodImageURLs = getAPODImageURLs(
+        datetime.datetime.now(), number_of_days_to_look_back
+    )
+    assert len(apodImageURLs) > 0, "No APOD images found"
+
+    pathsToImages = downloadImages(apodImageURLs)
+
+    print('Number of images downloaded: ' + str(len(pathsToImages)))
+
+    assert len(pathsToImages) > 0, "No images downloaded"
+
+    setWallpaper(pathsToImages)
+
+    return 0
+
+
+if __name__ == "__main__":
+    main()
