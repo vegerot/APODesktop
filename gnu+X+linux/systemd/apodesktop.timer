@@ -1,0 +1,11 @@
+[Unit]
+Description=Every day, change wallpapers to NASA Astronomy Picture of the Day
+Requires=apodesktop.service
+
+[Timer]
+#OnCalendar=*-*-* 12:35:00
+OnCalendar=daily
+Persistent=true
+
+[Install]
+WantedBy=timers.target

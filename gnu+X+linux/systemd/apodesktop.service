@@ -1,0 +1,5 @@
+[Unit]
+Description=Change wallpapers to NASA Astronomy Picture of the Day
+
+[Service]
+ExecStart=/usr/local/bin/apodesktop
