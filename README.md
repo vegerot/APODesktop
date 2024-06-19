@@ -57,8 +57,25 @@ $ .\scheduleApodDaily.ps1
 
 ## GNU+Linux
 
-lul stop being poor
+1. simply run
 
+```sh
+$ cd gnu+X+linux/
+$ make install
+```
+
+2. Profit?
+
+### Uninstallation
+
+1. simply run
+
+```sh
+$ cd gnu+X+linux/
+$ make uninstall
+```
+
+2. Unprofit?
 
 ## TODO
 
