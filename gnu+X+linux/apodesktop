@@ -7,48 +7,60 @@ import tempfile
 
 
 def getNumberOfMonitors():
+    # assert we're using X
+    assert "DISPLAY" in os.environ, "Not using X11"
     xrandrOutput = os.popen("xrandr").read()
     number_of_monitors = xrandrOutput.count(" connected")
     return number_of_monitors
 
 
 def getAPODImageURLs(date, number_of_days_to_look_back):
+    assert isinstance(date, datetime.datetime), "Date is not a datetime object"
+    assert (
+        number_of_days_to_look_back > 0
+    ), "Number of days to look back is not positive"
+
     dateToCheck = date - datetime.timedelta(days=number_of_days_to_look_back)
     formattedDate = dateToCheck.strftime("%Y-%m-%d")
-    print('Checking APOD for date: ' + formattedDate)
     apodURL = f"https://api.nasa.gov/planetary/apod?api_key=JvhDwQU1Uhv7yfaQTSqcsncZjwF5ZJR6McrzVE4f&start_date={formattedDate}"
     response = requests.get(apodURL)
     assert response.status_code == 200, "Failed to get APOD"
+
     responseJSON = response.json()
-    print(responseJSON)
     assert isinstance(responseJSON, list), "APOD response is not a list"
+
     apodImageURLs = [entry['hdurl'] or entry['url'] for entry in responseJSON if entry['media_type'] == 'image']
-    assert len(apodImageURLs) > 0, 'No APOD images found2'
-    print('Found APOD image URLs: ', apodImageURLs)
+    assert len(apodImageURLs) > 0, 'No APOD images found'
 
     return apodImageURLs
 
 
 def downloadImages(apodImageURLs):
-    tempDir = tempfile.mkdtemp()
-    pathsToImages = []
-    for apodImageURL in apodImageURLs:
+    assert len(apodImageURLs) > 0, "No APOD images to download"
+
+    def downloadImage(apodImageURL, tempDir):
         response = requests.get(apodImageURL)
         assert response.status_code == 200, 'Failed to download image'
+        assert 'image' in response.headers['Content-Type'], 'Downloaded file is not an image'
+
         with open(tempDir + "/" + apodImageURL.split("/")[-1], "wb") as f:
             f.write(response.content)
-        pathsToImages.append(tempDir + '/' + apodImageURL.split('/')[-1])
+        return tempDir + "/" + apodImageURL.split("/")[-1]
+
+    tempDir = tempfile.mkdtemp()
+    pathsToImages = [
+        downloadImage(apodImageURL, tempDir) for apodImageURL in apodImageURLs
+    ]
     return pathsToImages
 
 
-def setWallpaper(pathsToImages ):
-    print('Setting wallpaper to: ', pathsToImages)
+def setWallpaper(pathsToImages):
+    assert len(pathsToImages) > 0, 'No images to set as wallpaper'
+    assert 'DISPLAY' in os.environ, 'Not using X11'
     os.system('feh --bg-fill ' + ' '.join(pathsToImages))
 
 def main():
     number_of_monitors = getNumberOfMonitors()
-    print('Number of monitors: ' + str(number_of_monitors))
-
     assert number_of_monitors > 0, "No monitors detected"
 
     # look back two extra days in case the APOD is a video
@@ -60,9 +72,6 @@ def main():
     assert len(apodImageURLs) > 0, "No APOD images found"
 
     pathsToImages = downloadImages(apodImageURLs)
-
-    print('Number of images downloaded: ' + str(len(pathsToImages)))
-
     assert len(pathsToImages) > 0, "No images downloaded"
 
     setWallpaper(pathsToImages)
