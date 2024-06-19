@@ -34,6 +34,7 @@ def downloadImages(apodImageURLs):
     pathsToImages = []
     for apodImageURL in apodImageURLs:
         response = requests.get(apodImageURL)
+        assert response.status_code == 200, 'Failed to download image'
         with open(tempDir + "/" + apodImageURL.split("/")[-1], "wb") as f:
             f.write(response.content)
         pathsToImages.append(tempDir + '/' + apodImageURL.split('/')[-1])
