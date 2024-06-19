@@ -29,8 +29,12 @@ def getAPODImageURLs(date, number_of_days_to_look_back):
     responseJSON = response.json()
     assert isinstance(responseJSON, list), "APOD response is not a list"
 
-    apodImageURLs = [entry['hdurl'] or entry['url'] for entry in responseJSON if entry['media_type'] == 'image']
-    assert len(apodImageURLs) > 0, 'No APOD images found'
+    apodImageURLs = [
+        entry["hdurl"] or entry["url"]
+        for entry in responseJSON
+        if entry["media_type"] == "image"
+    ]
+    assert len(apodImageURLs) > 0, "No APOD images found"
 
     return apodImageURLs
 
@@ -40,8 +44,10 @@ def downloadImages(apodImageURLs):
 
     def downloadImage(apodImageURL, tempDir):
         response = requests.get(apodImageURL)
-        assert response.status_code == 200, 'Failed to download image'
-        assert 'image' in response.headers['Content-Type'], 'Downloaded file is not an image'
+        assert response.status_code == 200, "Failed to download image"
+        assert (
+            "image" in response.headers["Content-Type"]
+        ), "Downloaded file is not an image"
 
         with open(tempDir + "/" + apodImageURL.split("/")[-1], "wb") as f:
             f.write(response.content)
@@ -55,9 +61,10 @@ def downloadImages(apodImageURLs):
 
 
 def setWallpaper(pathsToImages):
-    assert len(pathsToImages) > 0, 'No images to set as wallpaper'
-    assert 'DISPLAY' in os.environ, 'Not using X11'
-    os.system('feh --bg-fill ' + ' '.join(pathsToImages))
+    assert len(pathsToImages) > 0, "No images to set as wallpaper"
+    assert "DISPLAY" in os.environ, "Not using X11"
+    os.system("feh --bg-fill " + " ".join(pathsToImages))
+
 
 def main():
     number_of_monitors = getNumberOfMonitors()
