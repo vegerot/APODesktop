@@ -1,5 +1,12 @@
 [Unit]
 Description=Change wallpapers to NASA Astronomy Picture of the Day
+After=sound.target
+Requires=sound.target
+StartLimitIntervalSec=10
 
 [Service]
 ExecStart=/usr/local/bin/apodesktop
+StartLimitBurst=5
+
+[Install]
+WantedBy=default.target
