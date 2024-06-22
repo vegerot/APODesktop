@@ -1,10 +1,12 @@
 PREFIX ?= /usr/local
-install:
+install: .install-stamp
+.install-stamp: ./apodesktop ./systemd/apodesktop.service ./systemd/apodesktop.timer
 	install -v ./apodesktop $(PREFIX)/bin/apodesktop
 	mkdir -p ~/.config/systemd/user
 	install -v ./systemd/* ~/.config/systemd/user/
 	systemctl --user enable apodesktop.timer 
 	systemctl --user start apodesktop.timer
+	touch .install-stamp
 
 uninstall:
 	rm $(PREFIX)/bin/apodesktop || true
