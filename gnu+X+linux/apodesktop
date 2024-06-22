@@ -44,15 +44,18 @@ def downloadImages(apodImageURLs):
     assert len(apodImageURLs) > 0, "No APOD images to download"
 
     def downloadImage(apodImageURL, tempDir):
+        imageName = apodImageURL.split("/")[-1]
+        if os.path.exists(tempDir + "/" + imageName):
+            return tempDir + "/" + imageName
         response = requests.get(apodImageURL)
         assert response.status_code == 200, "Failed to download image"
         assert (
             "image" in response.headers["Content-Type"]
         ), "Downloaded file is not an image"
 
-        with open(tempDir + "/" + apodImageURL.split("/")[-1], "wb") as f:
-            f.write(response.content)
-        return tempDir + "/" + apodImageURL.split("/")[-1]
+        with open(tempDir + "/" + imageName, "wb") as imageFile:
+            imageFile.write(response.content)
+        return tempDir + "/" + imageName
 
     tempDir = IMAGES_PATH
     os.makedirs(tempDir, exist_ok=True)
