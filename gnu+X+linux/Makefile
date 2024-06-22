@@ -14,3 +14,4 @@ uninstall:
 	rm ~/.config/systemd/user/apodesktop.timer || true
 	systemctl --user stop apodesktop.timer || true
 	systemctl --user disable apodesktop.timer || true
+	rm .install-stamp || true
