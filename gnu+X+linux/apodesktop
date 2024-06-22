@@ -3,7 +3,8 @@
 import datetime
 import os
 import requests
-import tempfile
+
+IMAGES_PATH = "/tmp/apodesktop/"
 
 
 def getNumberOfMonitors():
@@ -53,7 +54,8 @@ def downloadImages(apodImageURLs):
             f.write(response.content)
         return tempDir + "/" + apodImageURL.split("/")[-1]
 
-    tempDir = tempfile.mkdtemp()
+    tempDir = IMAGES_PATH
+    os.makedirs(tempDir, exist_ok=True)
     pathsToImages = [
         downloadImage(apodImageURL, tempDir) for apodImageURL in apodImageURLs
     ]
