@@ -37,7 +37,8 @@ def getAPODImageURLs(date, number_of_days_to_look_back):
     ]
     assert len(apodImageURLs) > 0, "No APOD images found"
 
-    return apodImageURLs
+    # reverse the list so that the most recent image is first
+    return list(reversed(apodImageURLs))
 
 
 def downloadImages(apodImageURLs):
