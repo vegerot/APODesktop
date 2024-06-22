@@ -8,7 +8,6 @@ IMAGES_PATH = "/tmp/apodesktop/"
 
 
 def getNumberOfMonitors():
-    # assert we're using X
     assert "DISPLAY" in os.environ, "Not using X11"
     xrandrOutput = os.popen("xrandr").read()
     number_of_monitors = xrandrOutput.count(" connected")
@@ -23,6 +22,7 @@ def getAPODImageURLs(date, number_of_days_to_look_back):
 
     dateToCheck = date - datetime.timedelta(days=number_of_days_to_look_back)
     formattedDate = dateToCheck.strftime("%Y-%m-%d")
+    # MUST FIX: Remove the API key from the code before sharing
     apodURL = f"https://api.nasa.gov/planetary/apod?api_key=JvhDwQU1Uhv7yfaQTSqcsncZjwF5ZJR6McrzVE4f&start_date={formattedDate}"
     response = requests.get(apodURL)
     assert response.status_code == 200, "Failed to get APOD"
