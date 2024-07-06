@@ -4,7 +4,7 @@ import datetime
 import os
 import requests
 
-IMAGES_PATH = "/tmp/apodesktop/"
+IMAGES_PATH = "/tmp/apodesktop"
 
 
 def getNumberOfMonitors():
@@ -69,7 +69,9 @@ def downloadImages(apodImageURLs):
 def setWallpaper(pathsToImages):
     assert len(pathsToImages) > 0, "No images to set as wallpaper"
     assert "DISPLAY" in os.environ, "Not using X11"
-    os.system("feh --bg-fill " + " ".join(pathsToImages))
+    quotedPathsToImages = [f"'{path}'" for path in pathsToImages]
+    imagesToDisplay = " ".join(quotedPathsToImages)
+    os.system("feh --bg-fill " + imagesToDisplay)
 
 
 def main():
