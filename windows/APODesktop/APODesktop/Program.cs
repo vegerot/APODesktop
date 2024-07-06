@@ -68,6 +68,9 @@ List<URL> getApodImageURLs(DateOnly since)
         urls.Add(new URL(image_url));
     }
 
+    // reverse the list so that the most recent image is first
+	urls.Reverse();
+
     return urls;
 }
 
