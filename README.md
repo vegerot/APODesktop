@@ -9,6 +9,7 @@ There are several ways to build APODesktop.  The simplest is by running `make`
 1. simply run
 
 ```sh
+$ cd macOS/
 $ make install
 ```
 
@@ -17,12 +18,14 @@ You can also build APODesktop with Xcode at your peril
 1.
 
 ```sh
+$ cd macOS/
 $ xcodebuild -scheme APODesktop -project APODesktop.xcodeproj -configuration Release CONFIGURATION_BUILD_DIR=./build
 ```
 
 or
 
 ```sh
+$ cd macOS/
 $ xcodebuild -target APODesktop -project APODesktop.xcodeproj -configuration Release CONFIGURATION_BUILD_DIR=./build
 ```
 
@@ -52,9 +55,9 @@ $ make uninstall
 2. run
 
 ```pwsh
-$ sl windows\APODesktop
-$ msbuild .
-$ .\scheduleApodDaily.ps1
+> sl windows\APODesktop
+> msbuild .
+> .\scheduleApodDaily.ps1
 ```
 
 3. Profit?
