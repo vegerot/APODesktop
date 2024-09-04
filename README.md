@@ -9,7 +9,6 @@ There are several ways to build APODesktop.  The simplest is by running `make`
 1. simply run
 
 ```sh
-$ cd macOS/
 $ make install
 ```
 
@@ -74,7 +73,6 @@ $ make uninstall
 1. simply run
 
 ```sh
-$ cd gnu+X+linux/
 $ make install
 ```
 
