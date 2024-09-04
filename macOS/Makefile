@@ -14,6 +14,11 @@ install: build/apodesktop $(PREFIX)/bin/apodesktop
 	launchctl load -w $(LAUNCHAGENTS)/$(PLIST)
 	$(PREFIX)/bin/apodesktop
 
+uninstall:
+	launchctl unload -w $(LAUNCHAGENTS)/$(PLIST)
+	rm -f $(LAUNCHAGENTS)/$(PLIST)
+	rm -f $(PREFIX)/bin/apodesktop
+
 clean:
 	rm -rf ./build
 

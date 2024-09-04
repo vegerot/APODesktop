@@ -35,6 +35,17 @@ You can also manually update your wallpaper at any time by running `apodesktop`
 1. Click run button
 2. Profit???
 
+### Uninstallation
+
+1. run
+
+```sh
+$ cd macOS/
+$ make uninstall
+```
+
+2. Unprofit?
+
 ## Windows
 
 1. Open Developer Powershell (Powershell with `msbuild`)
