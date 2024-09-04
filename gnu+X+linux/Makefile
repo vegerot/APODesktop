@@ -7,6 +7,7 @@ install: .install-stamp
 	systemctl --user enable apodesktop.timer 
 	systemctl --user start apodesktop.timer
 	touch .install-stamp
+	$(PREFIX)/bin/apodesktop
 
 uninstall:
 	rm $(PREFIX)/bin/apodesktop || true
