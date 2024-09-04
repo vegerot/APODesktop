@@ -3,6 +3,8 @@
 import datetime
 import os
 import requests
+# work around ipv6 bug on Ubuntu 22.04
+requests.packages.urllib3.util.connection.HAS_IPV6 = False
 
 IMAGES_PATH = "/tmp/apodesktop"
 
