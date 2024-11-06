@@ -10,6 +10,7 @@ LAUNCHAGENTS=~/Library/LaunchAgents
 PLIST=./launchCtlSchedule.plist
 install: build/apodesktop $(PREFIX)/bin/apodesktop
 	launchctl unload -w $(LAUNCHAGENTS)/$(PLIST)
+	install -d ~/Library/LaunchAgents
 	install $(PLIST) ~/Library/LaunchAgents
 	launchctl load -w $(LAUNCHAGENTS)/$(PLIST)
 	$(PREFIX)/bin/apodesktop
