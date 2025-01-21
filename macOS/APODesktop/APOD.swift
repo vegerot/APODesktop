@@ -23,12 +23,15 @@ func Main() async throws -> Result<Bool, ApodError> {
   let daysToLookBack = screens.count + 2
   let dateNDaysAgo: Date = .init(timeIntervalSinceNow: .init(-1 * daysToLookBack * 60 * 60 * 24))
   let remoteImageURLs = try await getApodImageURLs(from: dateNDaysAgo)
+  print("Found \(remoteImageURLs.count) images to download")
 
   let workspace = NSWorkspace()
   let localImageURLs =
     try await remoteImageURLs
     .concurrentCompactMap({ url in try await URLSession.shared.download(from: url).0 })
     .reversed()
+
+  print("Downloaded \(localImageURLs.count) images")
 
   for (image, screen) in zip(localImageURLs, screens) {
     try workspace.setDesktopImageURL(
@@ -39,7 +42,7 @@ func Main() async throws -> Result<Bool, ApodError> {
         .imageScaling: NSNumber(value: NSImageScaling.scaleProportionallyUpOrDown.rawValue),
       ])
   }
-
+  print("Set \(screens.count) desktop images")
   return .success(true)
 }
 

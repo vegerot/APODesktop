@@ -4,12 +4,16 @@
 <dict>
 	<key>EnvironmentVariables</key> <dict>
 		<key>PATH</key>
-		<string>/usr/local/bin</string>
+			<string>/usr/local/bin:/usr/bin:/bin</string>
+		<key>PS4</key>
+			<string>+%N:%i:%D %T> </string>
 	</dict>
 	<key>RunAtLoad</key> <true/>
 	<key>Label</key> <string>com.coplan.max</string>
 	<key>ProgramArguments</key> <array>
-		<string>/usr/local/bin/APODesktop</string>
+		<string>/bin/zsh</string>
+		<string>-xc</string>
+			<string>((date; apodesktop) >> /tmp/apodlog.out 2>&1) </string>
 	</array>
 	<key>StartCalendarInterval</key> <dict>
 		<key>Hour</key>
