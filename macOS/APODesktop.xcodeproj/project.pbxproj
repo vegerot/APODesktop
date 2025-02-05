@@ -24,6 +24,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		2BD96A5D2D41A9EB00EAA011 /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		E49A274928C1238700D4EC1E /* launchCtlSchedule.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = launchCtlSchedule.plist; sourceTree = "<group>"; };
 		E4D5D3B728C0127600C00156 /* APODesktop */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = APODesktop; sourceTree = BUILT_PRODUCTS_DIR; };
 		E4D5D3BA28C0127600C00156 /* APOD.swift */ = {isa = PBXFileReference; indentWidth = 2; lastKnownFileType = sourcecode.swift; path = APOD.swift; sourceTree = "<group>"; tabWidth = 2; usesTabs = 0; };
@@ -45,6 +46,7 @@
 		E4D5D3AE28C0127600C00156 = {
 			isa = PBXGroup;
 			children = (
+				2BD96A5D2D41A9EB00EAA011 /* Makefile */,
 				E49A274928C1238700D4EC1E /* launchCtlSchedule.plist */,
 				E4D5D3C228C0134900C00156 /* MyPlayground.playground */,
 				E4D5D3B928C0127600C00156 /* APODesktop */,
