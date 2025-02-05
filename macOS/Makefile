@@ -2,6 +2,8 @@ build/apodesktop: APODesktop/APOD.swift APODesktop/concurrentSequence.swift
 	mkdir -p build
 	swiftc APODesktop/* -o build/apodesktop
 
+# NOTE: if you change this, you may also need to update `PATH` in
+# `launchCtlSchedule.plist`
 PREFIX ?= /usr/local
 $(PREFIX)/bin/apodesktop: build/apodesktop
 	cp ./build/apodesktop $(PREFIX)/bin
