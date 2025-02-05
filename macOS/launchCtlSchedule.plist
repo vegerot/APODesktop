@@ -9,7 +9,7 @@
 			<string>+%N:%i:%D %T> </string>
 	</dict>
 	<key>RunAtLoad</key> <true/>
-	<key>Label</key> <string>com.coplan.max</string>
+	<key>Label</key> <string>com.vegerot.apodesktop</string>
 	<key>ProgramArguments</key> <array>
 		<string>/bin/zsh</string>
 		<string>-xc</string>

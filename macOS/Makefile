@@ -13,7 +13,7 @@ install: build/apodesktop $(PREFIX)/bin/apodesktop
 	install -d ~/Library/LaunchAgents
 	install $(PLIST) ~/Library/LaunchAgents
 	launchctl load -w $(LAUNCHAGENTS)/$(PLIST)
-	launchctl kickstart gui/501/com.coplan.max
+	launchctl kickstart gui/501/com.vegerot.apodesktop
 
 uninstall:
 	launchctl unload -w $(LAUNCHAGENTS)/$(PLIST)
