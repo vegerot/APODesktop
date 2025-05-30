@@ -79,7 +79,7 @@ func getApodImageURLs(from date: Date) async throws -> [URL] {
   let decoder = JSONDecoder()
   let apodItems = try decoder.decode([ApodEntry].self, from: apodData)
     .filter({ $0.media_type == .image })
-    .map({ apod in apod.hdurl ?? apod.url })
+    .compactMap({ apod in apod.hdurl ?? apod.url })
 
   return apodItems
 }
@@ -102,7 +102,7 @@ extension ApodError: CustomStringConvertible {
 
 struct ApodEntry: Codable {
   let hdurl: URL?
-  let url: URL
+  let url: URL?
   let media_type: ApodMediaType?
 
   enum ApodMediaType: String, Codable {
