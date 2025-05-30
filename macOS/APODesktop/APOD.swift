@@ -29,7 +29,7 @@ func Main() async throws -> Result<Bool, ApodError> {
   let workspace = NSWorkspace()
   let localImageURLs =
     try await remoteImageURLs
-    .concurrentCompactMap({ url in try await URLSession.shared.download(from: url).0 })
+    .concurrentCompactMap({ url in try await downloadImage(from: url) })
     .reversed()
 
   print("Downloaded \(localImageURLs.count) images")
@@ -45,6 +45,25 @@ func Main() async throws -> Result<Bool, ApodError> {
   }
   print("Set \(screens.count) desktop images")
   return .success(true)
+}
+
+func downloadImage(from url: URL) async throws -> URL? {
+  let (tempLocalURL, response) = try await URLSession.shared.download(from: url)
+
+  guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+    print("Failed to download from \(url): \((response as? HTTPURLResponse)?.statusCode ?? -1)")
+    return nil
+  }
+
+  // Check MIME type to ensure it's an image
+  if let mimeType = httpResponse.mimeType, mimeType.hasPrefix("image") {
+    return tempLocalURL
+  } else {
+    print("Downloaded file from \(url) is not an image (MIME type: \(httpResponse.mimeType ?? "unknown"))")
+    // Try to remove the downloaded file if it's not an image and we don't want it
+    try? FileManager.default.removeItem(at: tempLocalURL)
+    return nil
+  }
 }
 
 func getApodImageURLs(from date: Date) async throws -> [URL] {
