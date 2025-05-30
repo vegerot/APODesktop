@@ -108,6 +108,7 @@ struct ApodEntry: Codable {
   enum ApodMediaType: String, Codable {
     case image
     case video
+    case other
     // it would be nice to have an `unknown` default option.
     // Now the program will crash if an unexpectd media_type is returned
   }
