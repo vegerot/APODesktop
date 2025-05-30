@@ -22,6 +22,7 @@ func Main() async throws -> Result<Bool, ApodError> {
   /// shit happens (sometimes it's a video)
   let daysToLookBack = screens.count + 2
   let dateNDaysAgo: Date = .init(timeIntervalSinceNow: .init(-1 * daysToLookBack * 60 * 60 * 24))
+  print("Looking back \(daysToLookBack) days from \(dateNDaysAgo)")
   let remoteImageURLs = try await getApodImageURLs(from: dateNDaysAgo)
   print("Found \(remoteImageURLs.count) images to download")
 
