@@ -6,11 +6,13 @@ build/apodesktop: APODesktop/APOD.swift APODesktop/concurrentSequence.swift
 # `launchCtlSchedule.plist`
 PREFIX ?= /usr/local
 $(PREFIX)/bin/apodesktop: build/apodesktop
+	mkdir -pv $(PREFIX)/bin
 	cp ./build/apodesktop $(PREFIX)/bin
 
 LAUNCHAGENTS=~/Library/LaunchAgents
 PLIST=./launchCtlSchedule.plist
 install: build/apodesktop $(PREFIX)/bin/apodesktop
+
 	launchctl unload -w $(LAUNCHAGENTS)/$(PLIST)
 	install -d ~/Library/LaunchAgents
 	install $(PLIST) ~/Library/LaunchAgents
