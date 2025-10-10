@@ -18,6 +18,9 @@ struct APODesktop {
 func Main() async throws -> Result<Bool, ApodError> {
 
   let screens = NSScreen.screens
+  if screens.isEmpty {
+    throw ApodError.expectationFailed(message: "No screens found")
+  }
 
   /// shit happens (sometimes it's a video)
   let daysToLookBack = screens.count + 2
@@ -25,6 +28,9 @@ func Main() async throws -> Result<Bool, ApodError> {
   print("Looking back \(daysToLookBack) days from \(dateNDaysAgo)")
   let remoteImageURLs = try await getApodImageURLs(from: dateNDaysAgo)
   print("Found \(remoteImageURLs.count) images to download")
+  if (remoteImageURLs.count == 0) {
+    throw ApodError.expectationFailed(message: "No images found")
+  }
 
   let workspace = NSWorkspace()
   let localImageURLs =
@@ -33,6 +39,9 @@ func Main() async throws -> Result<Bool, ApodError> {
     .reversed()
 
   print("Downloaded \(localImageURLs.count) images")
+  if (localImageURLs.count == 0) {
+    throw ApodError.expectationFailed(message: "No valid images found")
+  }
 
   for (image, screen) in zip(localImageURLs, screens) {
     try workspace.setDesktopImageURL(
@@ -107,6 +116,7 @@ enum ApodError: Error {
   case badApiURL
   case badImageURL
   case apiGetFailed(message: String)
+  case expectationFailed(message: String)
 }
 
 extension ApodError: CustomStringConvertible {
