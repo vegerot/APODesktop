@@ -11,13 +11,13 @@ $(PREFIX)/bin/apodesktop: build/apodesktop
 
 LAUNCHAGENTS=~/Library/LaunchAgents
 PLIST=./launchCtlSchedule.plist
+LABEL=com.vegerot.apodesktop
 install: build/apodesktop $(PREFIX)/bin/apodesktop
-
-	launchctl unload -w $(LAUNCHAGENTS)/$(PLIST)
+	launchctl unload -w $(LAUNCHAGENTS)/$(LABEL).plist
 	install -d ~/Library/LaunchAgents
-	install $(PLIST) ~/Library/LaunchAgents
-	launchctl load -w $(LAUNCHAGENTS)/$(PLIST)
-	launchctl kickstart gui/501/com.vegerot.apodesktop
+	install $(PLIST) $(LAUNCHAGENTS)/$(LABEL).plist
+	launchctl load -w $(LAUNCHAGENTS)/$(LABEL).plist
+	launchctl kickstart gui/501/$(LABEL)
 
 uninstall:
 	launchctl unload -w $(LAUNCHAGENTS)/$(PLIST)
