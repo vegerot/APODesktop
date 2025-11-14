@@ -125,6 +125,7 @@ extension ApodError: CustomStringConvertible {
     case .badApiURL: return "API URL is bad"
     case .badImageURL: return "Image URL is bad"
     case .apiGetFailed(let message): return message
+    case .expectationFailed(message: let message): return message
     }
   }
 }
