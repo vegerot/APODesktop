@@ -5,7 +5,8 @@ Requires=sound.target
 StartLimitIntervalSec=10
 
 [Service]
-ExecStart=/usr/local/bin/apodesktop
+ExecStart=/usr/local/bin/apodesktop --daemon
+Restart=always
 StartLimitBurst=5
 
 [Install]
