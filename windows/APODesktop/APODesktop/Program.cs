@@ -22,7 +22,7 @@ int RunAsDaemon()
     monitor.Start();
     
     // Keep the application running
-    Application.Run();
+    Application.Run(monitor);
     return 0;
 }
 
