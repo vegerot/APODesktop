@@ -82,9 +82,9 @@ func getApodImageURLs(from date: Date) async throws -> [URL] {
 
   let apodDate = dateFormatter.string(from: date)
 
-  let apodUrlPath = "https://apod-api.sudos.site/v1/apod/"
+  let apodUrlPath = "https://api.nasa.gov/planetary/apod"
   // TODO: remove secret
-  let apiKey = "apod-SEvHNGXhhqXZ0uugbVhigOqq3ylcgBNX"
+  let apiKey = "JvhDwQU1Uhv7yfaQTSqcsncZjwF5ZJR6McrzVE4f"
 
   guard
     let apodURL = URL(
