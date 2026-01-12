@@ -82,11 +82,14 @@ func getApodImageURLs(from date: Date) async throws -> [URL] {
 
   let apodDate = dateFormatter.string(from: date)
 
+  let apodUrlPath = "https://api.nasa.gov/planetary/apod"
+  // TODO: remove secret
+  let apiKey = "JvhDwQU1Uhv7yfaQTSqcsncZjwF5ZJR6McrzVE4f"
+
   guard
     let apodURL = URL(
       string:
-        // TODO: remove secret
-        "https://api.nasa.gov/planetary/apod?api_key=JvhDwQU1Uhv7yfaQTSqcsncZjwF5ZJR6McrzVE4f&start_date=\(apodDate)"
+        "\(apodUrlPath)?api_key=\(apiKey)&start_date=\(apodDate)"
     )
   else {
     throw ApodError.badApiURL
