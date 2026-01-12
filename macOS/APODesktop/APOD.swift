@@ -28,7 +28,7 @@ func Main() async throws -> Result<Bool, ApodError> {
   print("Looking back \(daysToLookBack) days from \(dateNDaysAgo)")
   let remoteImageURLs = try await getApodImageURLs(from: dateNDaysAgo)
   print("Found \(remoteImageURLs.count) images to download")
-  if (remoteImageURLs.count == 0) {
+  if remoteImageURLs.count == 0 {
     throw ApodError.expectationFailed(message: "No images found")
   }
 
@@ -39,7 +39,7 @@ func Main() async throws -> Result<Bool, ApodError> {
     .reversed()
 
   print("Downloaded \(localImageURLs.count) images")
-  if (localImageURLs.count == 0) {
+  if localImageURLs.count == 0 {
     throw ApodError.expectationFailed(message: "No valid images found")
   }
 
@@ -68,7 +68,9 @@ func downloadImage(from url: URL) async throws -> URL? {
   if let mimeType = httpResponse.mimeType, mimeType.hasPrefix("image") {
     return tempLocalURL
   } else {
-    print("Downloaded file from \(url) is not an image (MIME type: \(httpResponse.mimeType ?? "unknown"))")
+    print(
+      "Downloaded file from \(url) is not an image (MIME type: \(httpResponse.mimeType ?? "unknown"))"
+    )
     // Try to remove the downloaded file if it's not an image and we don't want it
     try? FileManager.default.removeItem(at: tempLocalURL)
     return nil
@@ -128,7 +130,7 @@ extension ApodError: CustomStringConvertible {
     case .badApiURL: return "API URL is bad"
     case .badImageURL: return "Image URL is bad"
     case .apiGetFailed(let message): return message
-    case .expectationFailed(message: let message): return message
+    case .expectationFailed(let message): return message
     }
   }
 }
