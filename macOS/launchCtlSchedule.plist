@@ -9,11 +9,12 @@
 			<string>+%N:%i:%D %T> </string>
 	</dict>
 	<key>RunAtLoad</key> <true/>
+	<key>KeepAlive</key> <true/>
 	<key>Label</key> <string>com.vegerot.apodesktop</string>
 	<key>ProgramArguments</key> <array>
 		<string>/bin/zsh</string>
 		<string>-xc</string>
-			<string>((date; apodesktop) >> /tmp/apodlog.out 2>&1) </string>
+			<string>((date; apodesktop --daemon) >> /tmp/apodlog.out 2>&1) </string>
 	</array>
 	<key>StartCalendarInterval</key> <dict>
 		<key>Hour</key>

@@ -14,6 +14,8 @@ $ make install
 
 Now your wallpaper will be automatically updated every morning at 10:00AM!
 
+The service also runs as a daemon that monitors for display changes. When you plug in or unplug a monitor, the wallpaper will be updated automatically.
+
 You can also manually update your wallpaper at any time by running `apodesktop`
 
 <details>
@@ -60,6 +62,8 @@ $ make uninstall
 $ make install
 ```
 
+The service runs as a daemon that monitors for display changes. When you plug in or unplug a monitor, the wallpaper will be updated automatically.
+
 2. Profit?
 
 ### Uninstallation
@@ -84,6 +88,8 @@ $ make uninstall
 > .\scheduleApodDaily.ps1
 ```
 
+The scheduled task runs the application in daemon mode, which monitors for display changes. When you plug in or unplug a monitor, the wallpaper will be updated automatically.
+
 3. Profit?
 
 ### Uninstallation
@@ -95,4 +101,4 @@ $ make uninstall
 
 ## TODO
 
-- detect when the user plugs in a new monitor and update the wallpaper
+- ~~detect when the user plugs in a new monitor and update the wallpaper~~ ✅ Implemented!

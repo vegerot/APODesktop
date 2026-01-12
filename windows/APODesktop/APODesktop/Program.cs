@@ -2,10 +2,31 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Runtime.InteropServices;
+using System.Windows.Forms;
 
 using MonitorID = System.String;
 
-return main();
+// Check for daemon mode
+if (args.Length > 0 && args[0] == "--daemon")
+{
+    return RunAsDaemon();
+}
+else
+{
+    return main();
+}
+
+int RunAsDaemon()
+{
+    Console.WriteLine("Starting display monitoring daemon");
+    var monitor = new DisplayChangeMonitor();
+    monitor.Start();
+    
+    // Keep the application running
+    Application.Run(monitor);
+    return 0;
+}
+
 int main()
 {
     List<MonitorID> monitors = getScreens();
@@ -107,6 +128,68 @@ void SetTheseWallpapersToTheseImages(List<MonitorID> monitors, List<FilePath> pa
 
     }
 
+}
+
+class DisplayChangeMonitor : Form
+{
+    private int lastMonitorCount;
+    
+    public DisplayChangeMonitor()
+    {
+        // Create a hidden window to receive messages
+        this.ShowInTaskbar = false;
+        this.WindowState = FormWindowState.Minimized;
+        this.FormBorderStyle = FormBorderStyle.None;
+        this.Visible = false;
+        
+        lastMonitorCount = getScreens().Count;
+        Console.WriteLine($"Initial monitor count: {lastMonitorCount}");
+    }
+    
+    public new void Start()
+    {
+        // Update wallpaper on startup
+        try
+        {
+            main();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error updating wallpaper on startup: {ex.Message}");
+        }
+    }
+    
+    protected override void WndProc(ref Message m)
+    {
+        const int WM_DISPLAYCHANGE = 0x007E;
+        
+        if (m.Msg == WM_DISPLAYCHANGE)
+        {
+            HandleDisplayChange();
+        }
+        
+        base.WndProc(ref m);
+    }
+    
+    private void HandleDisplayChange()
+    {
+        try
+        {
+            int currentMonitorCount = getScreens().Count;
+            if (currentMonitorCount != lastMonitorCount)
+            {
+                Console.WriteLine($"Monitor count changed from {lastMonitorCount} to {currentMonitorCount}");
+                lastMonitorCount = currentMonitorCount;
+                
+                // Update wallpaper when monitor count changes
+                main();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error handling display change: {ex.Message}");
+        }
+    }
 }
 
 class FilePath

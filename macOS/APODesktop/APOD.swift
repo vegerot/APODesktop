@@ -11,7 +11,51 @@ import Foundation
 @main
 struct APODesktop {
   static func main() async throws {
-    let _ = try await Main()
+    // Check if we should run as a daemon (monitor for screen changes)
+    if CommandLine.arguments.contains("--daemon") {
+      let daemon = ScreenChangeMonitor()
+      daemon.startMonitoring()
+      RunLoop.main.run()
+    } else {
+      // One-time execution
+      let _ = try await Main()
+    }
+  }
+}
+
+class ScreenChangeMonitor {
+  private var lastScreenCount: Int = 0
+  
+  func startMonitoring() {
+    lastScreenCount = NSScreen.screens.count
+    print("Starting monitor detection daemon with \(lastScreenCount) screens")
+    
+    // Update wallpaper immediately on start
+    Task {
+      let _ = try? await Main()
+    }
+    
+    // Listen for screen configuration changes
+    NotificationCenter.default.addObserver(
+      forName: NSApplication.didChangeScreenParametersNotification,
+      object: nil,
+      queue: .main
+    ) { [weak self] _ in
+      self?.handleScreenChange()
+    }
+  }
+  
+  private func handleScreenChange() {
+    let currentScreenCount = NSScreen.screens.count
+    if currentScreenCount != lastScreenCount {
+      print("Screen count changed from \(lastScreenCount) to \(currentScreenCount)")
+      lastScreenCount = currentScreenCount
+      
+      // Update wallpaper when screen count changes
+      Task {
+        let _ = try? await Main()
+      }
+    }
   }
 }
 
