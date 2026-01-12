@@ -9,21 +9,20 @@ extension Sequence {
   func concurrentCompactMap<T>(
     _ transform: @escaping (Element) async throws -> T?
   ) async rethrows -> [T] {
-    try await withThrowingTaskGroup(of: (Int, T?).self) { group in
-      for (index, element) in self.enumerated() {
-        group.addTask {
-          (index, try await transform(element))
-        }
+    // concurrent
+    let tasks = self.map({ e in
+      Task {
+        try await transform(e)
       }
+    })
 
-      var indexedResults: [(Int, T?)] = []
-      for try await result in group {
-        indexedResults.append(result)
-      }
-
-      return indexedResults
-        .sorted(by: { lhs, rhs in lhs.0 < rhs.0 })
-        .compactMap { element in element.1 }
+    // map
+    var results = [Result<T?, Error>]()
+    for task in tasks {
+      results.append(await task.result)
     }
+
+    //compact
+    return results.compactMap({ result in try? result.get() })
   }
 }
