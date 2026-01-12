@@ -13,7 +13,7 @@
 	<key>ProgramArguments</key> <array>
 		<string>/bin/zsh</string>
 		<string>-xc</string>
-			<string>((date; apodesktop) >> /tmp/apodlog.out 2>&1) </string>
+			<string>((date; time apodesktop) >> /tmp/apodlog.out 2>&1) </string>
 	</array>
 	<key>StartCalendarInterval</key> <dict>
 		<key>Hour</key>
