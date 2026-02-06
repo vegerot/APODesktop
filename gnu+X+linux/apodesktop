@@ -27,7 +27,7 @@ def getAPODImageURLs(date, number_of_days_to_look_back):
     # MUST FIX: Remove the API key from the code before sharing
     apodURL = f"https://api.nasa.gov/planetary/apod?api_key=JvhDwQU1Uhv7yfaQTSqcsncZjwF5ZJR6McrzVE4f&start_date={formattedDate}"
     response = requests.get(apodURL)
-    assert response.status_code == 200, "Failed to get APOD"
+    assert response.status_code == 200, f"Failed to get APOD. Status code: {response.status_code}"
 
     responseJSON = response.json()
     assert isinstance(responseJSON, list), "APOD response is not a list"
@@ -51,7 +51,7 @@ def downloadImages(apodImageURLs):
         if os.path.exists(tempDir + "/" + imageName):
             return tempDir + "/" + imageName
         response = requests.get(apodImageURL)
-        assert response.status_code == 200, "Failed to download image"
+        assert response.status_code == 200, f"Failed to download image. Status code: {response.status_code}"
         assert (
             "image" in response.headers["Content-Type"]
         ), "Downloaded file is not an image"
