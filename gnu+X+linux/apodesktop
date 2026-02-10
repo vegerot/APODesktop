@@ -3,6 +3,8 @@
 import datetime
 import os
 import requests
+import subprocess
+
 # work around ipv6 bug on Ubuntu 22.04
 requests.packages.urllib3.util.connection.HAS_IPV6 = False
 
@@ -12,19 +14,9 @@ IMAGES_PATH = "/tmp/apodesktop"
 def getNumberOfMonitors():
     # If using GNOME, we might be on Wayland where xrandr doesn't work well
     # but for now we'll check if DISPLAY is present as a fallback
-    if "DISPLAY" not in os.environ and "WAYLAND_DISPLAY" not in os.environ:
-         return 1 # Fallback for headless or restricted envs
-         
-    try:
-        xrandrOutput = os.popen("xrandr").read()
-        number_of_monitors = xrandrOutput.count(" connected")
-        if number_of_monitors > 0:
-            return number_of_monitors
-    except:
-        pass
-    
-    return 1 # Default to 1 if detection fails
-
+    xrandrOutput = subprocess.check_output(["xrandr"], text=True)
+    number_of_monitors = xrandrOutput.count(" connected")
+    return number_of_monitors
 
 def getAPODImageURLs(date, number_of_days_to_look_back):
     assert isinstance(date, datetime.datetime), "Date is not a datetime object"
@@ -92,7 +84,7 @@ def setWallpaper(pathsToImages):
         
         # Get monitor geometry from xrandr
         monitors = []
-        xrandrOutput = os.popen("xrandr --query").read()
+        xrandrOutput = subprocess.check_output(["xrandr", "--query"], text=True)
         # Regex to find: DP-1 connected 5120x2880+6144+0 (normal) or 5120x2880+6144+0 (primary)
         pattern = re.compile(r"(\d+)x(\d+)\+(\d+)\+(\d+)")
         for line in xrandrOutput.splitlines():
@@ -106,8 +98,8 @@ def setWallpaper(pathsToImages):
              # Fallback to single monitor gsettings if xrandr fails
              path = os.path.abspath(pathsToImages[0])
              uri = f"file://{path}"
-             os.system(f"gsettings set org.gnome.desktop.background picture-uri '{uri}'")
-             os.system(f"gsettings set org.gnome.desktop.background picture-uri-dark '{uri}'")
+             subprocess.run(["gsettings", "set", "org.gnome.desktop.background", "picture-uri", uri])
+             subprocess.run(["gsettings", "set", "org.gnome.desktop.background", "picture-uri-dark", uri])
              return
 
         # Calculate total canvas size
@@ -139,14 +131,13 @@ def setWallpaper(pathsToImages):
         canvas.save(combined_path, quality=95)
         
         uri = f"file://{os.path.abspath(combined_path)}"
-        os.system(f"gsettings set org.gnome.desktop.background picture-options 'spanned'")
-        os.system(f"gsettings set org.gnome.desktop.background picture-uri '{uri}'")
-        os.system(f"gsettings set org.gnome.desktop.background picture-uri-dark '{uri}'")
+        subprocess.run(["gsettings", "set", "org.gnome.desktop.background", "picture-options", "spanned"])
+        subprocess.run(["gsettings", "set", "org.gnome.desktop.background", "picture-uri", uri])
+        subprocess.run(["gsettings", "set", "org.gnome.desktop.background", "picture-uri-dark", uri])
     else:
         assert "DISPLAY" in os.environ, "Not using X11"
-        quotedPathsToImages = [f"'{path}'" for path in pathsToImages]
-        imagesToDisplay = " ".join(quotedPathsToImages)
-        os.system("feh --bg-fill " + imagesToDisplay)
+        command = ["feh", "--bg-fill"] + pathsToImages
+        subprocess.run(command)
 
 
 def main():
