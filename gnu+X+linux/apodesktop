@@ -118,13 +118,7 @@ def setWallpaperGnome(pathsToImages):
                 w, h, x, y = map(int, match.groups())
                 monitors.append({"w": w, "h": h, "x": x, "y": y})
 
-    if not monitors:
-         # Fallback to single monitor gsettings if xrandr fails
-         path = os.path.abspath(pathsToImages[0])
-         uri = f"file://{path}"
-         subprocess.run(["gsettings", "set", "org.gnome.desktop.background", "picture-uri", uri])
-         subprocess.run(["gsettings", "set", "org.gnome.desktop.background", "picture-uri-dark", uri])
-         return
+    assert len(monitors) > 0, "No monitors detected from xrandr output"
 
     combined_path = createCombinedWallpaper(pathsToImages, monitors)
 
