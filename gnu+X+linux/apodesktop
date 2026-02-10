@@ -10,12 +10,14 @@ requests.packages.urllib3.util.connection.HAS_IPV6 = False
 
 IMAGES_PATH = "/tmp/apodesktop"
 
+
 def getNumberOfMonitors():
     # If using GNOME, we might be on Wayland where xrandr doesn't work well
     # but for now we'll check if DISPLAY is present as a fallback
     xrandrOutput = subprocess.check_output(["xrandr"], text=True)
     number_of_monitors = xrandrOutput.count(" connected")
     return number_of_monitors
+
 
 def getAPODImageURLs(date, number_of_days_to_look_back):
     assert isinstance(date, datetime.datetime), "Date is not a datetime object"
@@ -158,7 +160,8 @@ def setWallpaper(pathsToImages):
     assert len(pathsToImages) > 0, "No images to set as wallpaper"
 
     desktop_session = os.environ.get("XDG_CURRENT_DESKTOP", "").lower()
-    is_gnome = "gnome" in desktop_session
+    gdm_session = os.environ.get("GDMSESSION", "").lower()
+    is_gnome = "gnome" in desktop_session and "i3" not in gdm_session
 
     if is_gnome:
         print("Using GNOME-specific wallpaper setting")
