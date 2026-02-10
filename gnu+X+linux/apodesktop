@@ -10,10 +10,20 @@ IMAGES_PATH = "/tmp/apodesktop"
 
 
 def getNumberOfMonitors():
-    assert "DISPLAY" in os.environ, "Not using X11"
-    xrandrOutput = os.popen("xrandr").read()
-    number_of_monitors = xrandrOutput.count(" connected")
-    return number_of_monitors
+    # If using GNOME, we might be on Wayland where xrandr doesn't work well
+    # but for now we'll check if DISPLAY is present as a fallback
+    if "DISPLAY" not in os.environ and "WAYLAND_DISPLAY" not in os.environ:
+         return 1 # Fallback for headless or restricted envs
+         
+    try:
+        xrandrOutput = os.popen("xrandr").read()
+        number_of_monitors = xrandrOutput.count(" connected")
+        if number_of_monitors > 0:
+            return number_of_monitors
+    except:
+        pass
+    
+    return 1 # Default to 1 if detection fails
 
 
 def getAPODImageURLs(date, number_of_days_to_look_back):
@@ -70,10 +80,73 @@ def downloadImages(apodImageURLs):
 
 def setWallpaper(pathsToImages):
     assert len(pathsToImages) > 0, "No images to set as wallpaper"
-    assert "DISPLAY" in os.environ, "Not using X11"
-    quotedPathsToImages = [f"'{path}'" for path in pathsToImages]
-    imagesToDisplay = " ".join(quotedPathsToImages)
-    os.system("feh --bg-fill " + imagesToDisplay)
+
+    desktop_session = os.environ.get("XDG_CURRENT_DESKTOP", "").lower()
+    is_gnome = "gnome" in desktop_session
+
+    if is_gnome:
+        # GNOME doesn't support different wallpapers per monitor natively via gsettings.
+        # We create a single large canvas spanning all monitors.
+        from PIL import Image
+        import re
+        
+        # Get monitor geometry from xrandr
+        monitors = []
+        xrandrOutput = os.popen("xrandr --query").read()
+        # Regex to find: DP-1 connected 5120x2880+6144+0 (normal) or 5120x2880+6144+0 (primary)
+        pattern = re.compile(r"(\d+)x(\d+)\+(\d+)\+(\d+)")
+        for line in xrandrOutput.splitlines():
+            if " connected" in line:
+                match = pattern.search(line)
+                if match:
+                    w, h, x, y = map(int, match.groups())
+                    monitors.append({'w': w, 'h': h, 'x': x, 'y': y})
+
+        if not monitors:
+             # Fallback to single monitor gsettings if xrandr fails
+             path = os.path.abspath(pathsToImages[0])
+             uri = f"file://{path}"
+             os.system(f"gsettings set org.gnome.desktop.background picture-uri '{uri}'")
+             os.system(f"gsettings set org.gnome.desktop.background picture-uri-dark '{uri}'")
+             return
+
+        # Calculate total canvas size
+        max_x = max(m['x'] + m['w'] for m in monitors)
+        max_y = max(m['y'] + m['h'] for m in monitors)
+        canvas = Image.new('RGB', (max_x, max_y))
+
+        for i, m in enumerate(monitors):
+            img_path = pathsToImages[i % len(pathsToImages)]
+            img = Image.open(img_path)
+            # Simple zoom/fill logic for each monitor
+            img_ratio = img.width / img.height
+            mon_ratio = m['w'] / m['h']
+            if img_ratio > mon_ratio:
+                new_h = m['h']
+                new_w = int(new_h * img_ratio)
+            else:
+                new_w = m['w']
+                new_h = int(new_w / img_ratio)
+            
+            img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+            # Crop to monitor size
+            left = (new_w - m['w']) / 2
+            top = (new_h - m['h']) / 2
+            img = img.crop((left, top, left + m['w'], top + m['h']))
+            canvas.paste(img, (m['x'], m['y']))
+
+        combined_path = os.path.join(IMAGES_PATH, "combined_wallpaper.jpg")
+        canvas.save(combined_path, quality=95)
+        
+        uri = f"file://{os.path.abspath(combined_path)}"
+        os.system(f"gsettings set org.gnome.desktop.background picture-options 'spanned'")
+        os.system(f"gsettings set org.gnome.desktop.background picture-uri '{uri}'")
+        os.system(f"gsettings set org.gnome.desktop.background picture-uri-dark '{uri}'")
+    else:
+        assert "DISPLAY" in os.environ, "Not using X11"
+        quotedPathsToImages = [f"'{path}'" for path in pathsToImages]
+        imagesToDisplay = " ".join(quotedPathsToImages)
+        os.system("feh --bg-fill " + imagesToDisplay)
 
 
 def main():
