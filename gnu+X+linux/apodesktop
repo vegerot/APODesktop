@@ -10,10 +10,20 @@ IMAGES_PATH = "/tmp/apodesktop"
 
 
 def getNumberOfMonitors():
-    assert "DISPLAY" in os.environ, "Not using X11"
-    xrandrOutput = os.popen("xrandr").read()
-    number_of_monitors = xrandrOutput.count(" connected")
-    return number_of_monitors
+    # If using GNOME, we might be on Wayland where xrandr doesn't work well
+    # but for now we'll check if DISPLAY is present as a fallback
+    if "DISPLAY" not in os.environ and "WAYLAND_DISPLAY" not in os.environ:
+         return 1 # Fallback for headless or restricted envs
+         
+    try:
+        xrandrOutput = os.popen("xrandr").read()
+        number_of_monitors = xrandrOutput.count(" connected")
+        if number_of_monitors > 0:
+            return number_of_monitors
+    except:
+        pass
+    
+    return 1 # Default to 1 if detection fails
 
 
 def getAPODImageURLs(date, number_of_days_to_look_back):
@@ -70,10 +80,23 @@ def downloadImages(apodImageURLs):
 
 def setWallpaper(pathsToImages):
     assert len(pathsToImages) > 0, "No images to set as wallpaper"
-    assert "DISPLAY" in os.environ, "Not using X11"
-    quotedPathsToImages = [f"'{path}'" for path in pathsToImages]
-    imagesToDisplay = " ".join(quotedPathsToImages)
-    os.system("feh --bg-fill " + imagesToDisplay)
+    
+    # Check if we are running under GNOME
+    desktop_session = os.environ.get("XDG_CURRENT_DESKTOP", "").lower()
+    is_gnome = "gnome" in desktop_session
+    
+    if is_gnome:
+        # GNOME uses gsettings to set wallpaper. It only supports one image for all monitors natively this way.
+        # Alternatively, it can be done per-monitor with more complex methods, but for now:
+        path = os.path.abspath(pathsToImages[0])
+        uri = f"file://{path}"
+        os.system(f"gsettings set org.gnome.desktop.background picture-uri '{uri}'")
+        os.system(f"gsettings set org.gnome.desktop.background picture-uri-dark '{uri}'")
+    else:
+        assert "DISPLAY" in os.environ, "Not using X11"
+        quotedPathsToImages = [f"'{path}'" for path in pathsToImages]
+        imagesToDisplay = " ".join(quotedPathsToImages)
+        os.system("feh --bg-fill " + imagesToDisplay)
 
 
 def main():
