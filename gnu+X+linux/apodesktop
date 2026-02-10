@@ -10,7 +10,6 @@ requests.packages.urllib3.util.connection.HAS_IPV6 = False
 
 IMAGES_PATH = "/tmp/apodesktop"
 
-
 def getNumberOfMonitors():
     # If using GNOME, we might be on Wayland where xrandr doesn't work well
     # but for now we'll check if DISPLAY is present as a fallback
@@ -29,7 +28,9 @@ def getAPODImageURLs(date, number_of_days_to_look_back):
     # MUST FIX: Remove the API key from the code before sharing
     apodURL = f"https://api.nasa.gov/planetary/apod?api_key=JvhDwQU1Uhv7yfaQTSqcsncZjwF5ZJR6McrzVE4f&start_date={formattedDate}"
     response = requests.get(apodURL)
-    assert response.status_code == 200, f"Failed to get APOD. Status code: {response.status_code}"
+    assert (
+        response.status_code == 200
+    ), f"Failed to get APOD. Status code: {response.status_code}"
 
     responseJSON = response.json()
     assert isinstance(responseJSON, list), "APOD response is not a list"
@@ -53,7 +54,17 @@ def downloadImages(apodImageURLs):
         if os.path.exists(tempDir + "/" + imageName):
             return tempDir + "/" + imageName
         response = requests.get(apodImageURL)
-        assert response.status_code == 200, f"Failed to download image. Status code: {response.status_code}"
+        if response.status_code != 200:
+            print(f"Failed to download from {apodImageURL}: {response.status_code}")
+            return None
+        if not response.headers.get("Content-Type", "").startswith("image"):
+            print(
+                f"Downloaded file from {apodImageURL} is not an image (MIME type: {response.headers.get('Content-Type', 'unknown')})"
+            )
+            return None
+        assert (
+            response.status_code == 200
+        ), f"Failed to download image. Status code: {response.status_code}"
         assert (
             "image" in response.headers["Content-Type"]
         ), "Downloaded file is not an image"
@@ -67,6 +78,8 @@ def downloadImages(apodImageURLs):
     pathsToImages = [
         downloadImage(apodImageURL, tempDir) for apodImageURL in apodImageURLs
     ]
+    # Filter out None values (failed downloads)
+    pathsToImages = [path for path in pathsToImages if path is not None]
     return pathsToImages
 
 
@@ -119,6 +132,7 @@ def setWallpaperGnome(pathsToImages):
                 monitors.append({"w": w, "h": h, "x": x, "y": y})
 
     assert len(monitors) > 0, "No monitors detected from xrandr output"
+    print(f"Detected {len(monitors)} monitors")
 
     combined_path = createCombinedWallpaper(pathsToImages, monitors)
 
@@ -147,8 +161,10 @@ def setWallpaper(pathsToImages):
     is_gnome = "gnome" in desktop_session
 
     if is_gnome:
+        print("Using GNOME-specific wallpaper setting")
         setWallpaperGnome(pathsToImages)
     else:
+        print("Using feh to set wallpaper")
         assert "DISPLAY" in os.environ, "Not using X11"
         command = ["feh", "--bg-fill"] + pathsToImages
         subprocess.run(command)
@@ -157,19 +173,27 @@ def setWallpaper(pathsToImages):
 def main():
     number_of_monitors = getNumberOfMonitors()
     assert number_of_monitors > 0, "No monitors detected"
+    print(f"Detected {number_of_monitors} monitors from xrandr")
 
     # look back two extra days in case the APOD is a video
     number_of_days_to_look_back = number_of_monitors + 2
+    date_n_days_ago = datetime.datetime.now() - datetime.timedelta(
+        days=number_of_days_to_look_back
+    )
+    print(f"Looking back {number_of_days_to_look_back} days from {date_n_days_ago}")
 
     apodImageURLs = getAPODImageURLs(
         datetime.datetime.now(), number_of_days_to_look_back
     )
+    print(f"Found {len(apodImageURLs)} images to download")
     assert len(apodImageURLs) > 0, "No APOD images found"
 
     pathsToImages = downloadImages(apodImageURLs)
+    print(f"Downloaded {len(pathsToImages)} images")
     assert len(pathsToImages) > 0, "No images downloaded"
 
     setWallpaper(pathsToImages)
+    print(f"Set {number_of_monitors} desktop images")
 
     return 0
 
