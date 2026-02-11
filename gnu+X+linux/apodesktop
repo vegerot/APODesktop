@@ -2,92 +2,115 @@
 
 import datetime
 import os
-import requests
 import subprocess
+import urllib.request
+import json
+import re
 
 # work around ipv6 bug on Ubuntu 22.04
-requests.packages.urllib3.util.connection.HAS_IPV6 = False
+# Note: urllib.request doesn't have a direct equivalent to requests' HAS_IPV6 toggle 
+# but it generally handles it gracefully or follows system preferences.
 
 IMAGES_PATH = "/tmp/apodesktop"
 
+def http_get_json(url):
+    with urllib.request.urlopen(url) as response:
+        assert response.status == 200, f"Failed to get JSON. Status code: {response.status}"
+        return json.loads(response.read().decode())
+
+def http_download(url, dest_path):
+    # Some URLs might need a user-agent if they block default python-urllib
+    req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+    with urllib.request.urlopen(req) as response:
+        assert response.status == 200, f"Failed to download image. Status code: {response.status}"
+        content_type = response.info().get('Content-Type', '')
+        assert "image" in content_type, f"Downloaded file is not an image ({content_type})"
+        with open(dest_path, 'wb') as f:
+            f.write(response.read())
+        return content_type
 
 def getNumberOfMonitors():
-    # If using GNOME, we might be on Wayland where xrandr doesn't work well
-    # but for now we'll check if DISPLAY is present as a fallback
-    xrandrOutput = subprocess.check_output(["xrandr"], text=True)
-    number_of_monitors = xrandrOutput.count(" connected")
-    return number_of_monitors
+    desktop_session = os.environ.get("XDG_CURRENT_DESKTOP", "").lower()
+    
+    # Try Hyprland first
+    if "hyprland" in desktop_session:
+        try:
+            output = subprocess.check_output(["hyprctl", "monitors", "-j"], text=True)
+            monitors_data = json.loads(output)
+            # Filter only active monitors
+            return [{"w": m["width"], "h": m["height"], "x": m["x"], "y": m["y"], "name": m["name"]} for m in monitors_data if not m.get("disabled", False)]
+        except Exception as e:
+            print(f"Failed to get Hyprland monitors: {e}")
 
+    # Fallback to xrandr
+    try:
+        monitors = []
+        xrandrOutput = subprocess.check_output(["xrandr", "--query"], text=True)
+        pattern = re.compile(r"(\d+)x(\d+)\+(\d+)\+(\d+)")
+        for line in xrandrOutput.splitlines():
+            if " connected" in line:
+                match = pattern.search(line)
+                if match:
+                    w, h, x, y = map(int, match.groups())
+                    monitors.append({"w": w, "h": h, "x": x, "y": y, "name": None})
+        if monitors:
+            return monitors
+    except Exception as e:
+        print(f"Failed to get xrandr monitors: {e}")
+
+    return []
 
 def getAPODImageURLs(date, number_of_days_to_look_back):
     assert isinstance(date, datetime.datetime), "Date is not a datetime object"
-    assert (
-        number_of_days_to_look_back > 0
-    ), "Number of days to look back is not positive"
+    assert number_of_days_to_look_back > 0, "Number of days to look back is not positive"
 
     dateToCheck = date - datetime.timedelta(days=number_of_days_to_look_back)
     formattedDate = dateToCheck.strftime("%Y-%m-%d")
+    
     # MUST FIX: Remove the API key from the code before sharing
     apodURL = f"https://api.nasa.gov/planetary/apod?api_key=JvhDwQU1Uhv7yfaQTSqcsncZjwF5ZJR6McrzVE4f&start_date={formattedDate}"
-    response = requests.get(apodURL)
-    assert (
-        response.status_code == 200
-    ), f"Failed to get APOD. Status code: {response.status_code}"
-
-    responseJSON = response.json()
+    
+    responseJSON = http_get_json(apodURL)
     assert isinstance(responseJSON, list), "APOD response is not a list"
-
+    
     apodImageURLs = [
-        entry["hdurl"] or entry["url"]
+        entry.get("hdurl") or entry.get("url")
         for entry in responseJSON
-        if entry["media_type"] == "image"
+        if entry.get("media_type") == "image"
     ]
     assert len(apodImageURLs) > 0, "No APOD images found"
-
+    
     # reverse the list so that the most recent image is first
     return list(reversed(apodImageURLs))
 
-
 def downloadImages(apodImageURLs):
     assert len(apodImageURLs) > 0, "No APOD images to download"
-
-    def downloadImage(apodImageURL, tempDir):
-        imageName = apodImageURL.split("/")[-1]
-        if os.path.exists(tempDir + "/" + imageName):
-            return tempDir + "/" + imageName
-        response = requests.get(apodImageURL)
-        if response.status_code != 200:
-            print(f"Failed to download from {apodImageURL}: {response.status_code}")
-            return None
-        if not response.headers.get("Content-Type", "").startswith("image"):
-            print(
-                f"Downloaded file from {apodImageURL} is not an image (MIME type: {response.headers.get('Content-Type', 'unknown')})"
-            )
-            return None
-        assert (
-            response.status_code == 200
-        ), f"Failed to download image. Status code: {response.status_code}"
-        assert (
-            "image" in response.headers["Content-Type"]
-        ), "Downloaded file is not an image"
-
-        with open(tempDir + "/" + imageName, "wb") as imageFile:
-            imageFile.write(response.content)
-        return tempDir + "/" + imageName
-
+    
     tempDir = IMAGES_PATH
     os.makedirs(tempDir, exist_ok=True)
-    pathsToImages = [
-        downloadImage(apodImageURL, tempDir) for apodImageURL in apodImageURLs
-    ]
-    # Filter out None values (failed downloads)
-    pathsToImages = [path for path in pathsToImages if path is not None]
+    pathsToImages = []
+    
+    for url in apodImageURLs:
+        imageName = url.split("/")[-1]
+        dest = os.path.join(tempDir, imageName)
+        if os.path.exists(dest):
+            pathsToImages.append(dest)
+            continue
+            
+        try:
+            print(f"Downloading {url}...")
+            http_download(url, dest)
+            pathsToImages.append(dest)
+        except Exception as e:
+            print(f"Failed to download {url}: {e}")
+            continue
+            
+    assert len(pathsToImages) > 0, "No images downloaded"
     return pathsToImages
-
 
 def createCombinedWallpaper(pathsToImages, monitors):
     from PIL import Image
-
+    
     # Calculate total canvas size
     max_x = max(m["x"] + m["w"] for m in monitors)
     max_y = max(m["y"] + m["h"] for m in monitors)
@@ -96,6 +119,7 @@ def createCombinedWallpaper(pathsToImages, monitors):
     for i, m in enumerate(monitors):
         img_path = pathsToImages[i % len(pathsToImages)]
         img = Image.open(img_path)
+        
         # Simple zoom/fill logic for each monitor
         img_ratio = img.width / img.height
         mon_ratio = m["w"] / m["h"]
@@ -117,89 +141,63 @@ def createCombinedWallpaper(pathsToImages, monitors):
     canvas.save(combined_path, quality=95)
     return combined_path
 
-
-def setWallpaperGnome(pathsToImages):
-    import re
-
-    # Get monitor geometry from xrandr
-    monitors = []
-    xrandrOutput = subprocess.check_output(["xrandr", "--query"], text=True)
-    # Regex to find: DP-1 connected 5120x2880+6144+0 (normal) or 5120x2880+6144+0 (primary)
-    pattern = re.compile(r"(\d+)x(\d+)\+(\d+)\+(\d+)")
-    for line in xrandrOutput.splitlines():
-        if " connected" in line:
-            match = pattern.search(line)
-            if match:
-                w, h, x, y = map(int, match.groups())
-                monitors.append({"w": w, "h": h, "x": x, "y": y})
-
-    assert len(monitors) > 0, "No monitors detected from xrandr output"
-    print(f"Detected {len(monitors)} monitors")
-
-    combined_path = createCombinedWallpaper(pathsToImages, monitors)
-
-    uri = f"file://{os.path.abspath(combined_path)}"
-    subprocess.run(
-        [
-            "gsettings",
-            "set",
-            "org.gnome.desktop.background",
-            "picture-options",
-            "spanned",
-        ]
-    )
-    subprocess.run(
-        ["gsettings", "set", "org.gnome.desktop.background", "picture-uri", uri]
-    )
-    subprocess.run(
-        ["gsettings", "set", "org.gnome.desktop.background", "picture-uri-dark", uri]
-    )
-
-
-def setWallpaper(pathsToImages):
+def setWallpaper(pathsToImages, monitors):
     assert len(pathsToImages) > 0, "No images to set as wallpaper"
-
+    
     desktop_session = os.environ.get("XDG_CURRENT_DESKTOP", "").lower()
     gdm_session = os.environ.get("GDMSESSION", "").lower()
     is_gnome = "gnome" in desktop_session and "i3" not in gdm_session
 
-    if is_gnome:
+    if "hyprland" in desktop_session:
+        # Kill existing swaybg
+        subprocess.run(["pkill", "swaybg"])
+        
+        for i, m in enumerate(monitors):
+            img = pathsToImages[i % len(pathsToImages)]
+            print(f"Setting wallpaper for {m.get('name', 'monitor '+str(i))} to {img}")
+            # Running swaybg per monitor
+            if m.get("name"):
+                subprocess.Popen(["swaybg", "-o", m["name"], "-i", img, "-m", "fill"])
+            else:
+                subprocess.Popen(["swaybg", "-i", img, "-m", "fill"])
+            
+    elif is_gnome:
         print("Using GNOME-specific wallpaper setting")
-        setWallpaperGnome(pathsToImages)
+        # For GNOME, we try to use PIL if available to create a spanned wallpaper
+        try:
+            combined_path = createCombinedWallpaper(pathsToImages, monitors)
+            uri = f"file://{os.path.abspath(combined_path)}"
+            subprocess.run(["gsettings", "set", "org.gnome.desktop.background", "picture-options", "spanned"])
+            subprocess.run(["gsettings", "set", "org.gnome.desktop.background", "picture-uri", uri])
+            subprocess.run(["gsettings", "set", "org.gnome.desktop.background", "picture-uri-dark", uri])
+        except ImportError:
+            print("PIL not found, setting first image as wallpaper")
+            uri = f"file://{os.path.abspath(pathsToImages[0])}"
+            subprocess.run(["gsettings", "set", "org.gnome.desktop.background", "picture-options", "zoom"])
+            subprocess.run(["gsettings", "set", "org.gnome.desktop.background", "picture-uri", uri])
+            subprocess.run(["gsettings", "set", "org.gnome.desktop.background", "picture-uri-dark", uri])
     else:
         print("Using feh to set wallpaper")
-        assert "DISPLAY" in os.environ, "Not using X11"
-        command = ["feh", "--bg-fill"] + pathsToImages
-        subprocess.run(command)
-
+        assert "DISPLAY" in os.environ or "WAYLAND_DISPLAY" in os.environ, "No display found"
+        subprocess.run(["feh", "--bg-fill"] + pathsToImages)
 
 def main():
-    number_of_monitors = getNumberOfMonitors()
-    assert number_of_monitors > 0, "No monitors detected"
-    print(f"Detected {number_of_monitors} monitors from xrandr")
+    monitors = getNumberOfMonitors()
+    assert len(monitors) > 0, "No monitors detected"
+    print(f"Detected {len(monitors)} monitors")
 
-    # look back two extra days in case the APOD is a video
-    number_of_days_to_look_back = number_of_monitors + 2
-    date_n_days_ago = datetime.datetime.now() - datetime.timedelta(
-        days=number_of_days_to_look_back
-    )
-    print(f"Looking back {number_of_days_to_look_back} days from {date_n_days_ago}")
-
-    apodImageURLs = getAPODImageURLs(
-        datetime.datetime.now(), number_of_days_to_look_back
-    )
+    # look back a few extra days in case the APOD is a video
+    number_of_days_to_look_back = len(monitors) + 2
+    
+    apodImageURLs = getAPODImageURLs(datetime.datetime.now(), number_of_days_to_look_back)
     print(f"Found {len(apodImageURLs)} images to download")
-    assert len(apodImageURLs) > 0, "No APOD images found"
 
     pathsToImages = downloadImages(apodImageURLs)
     print(f"Downloaded {len(pathsToImages)} images")
-    assert len(pathsToImages) > 0, "No images downloaded"
 
-    setWallpaper(pathsToImages)
-    print(f"Set {number_of_monitors} desktop images")
-
+    setWallpaper(pathsToImages, monitors)
+    print(f"Set wallpaper for {len(monitors)} monitors")
     return 0
-
 
 if __name__ == "__main__":
     main()
