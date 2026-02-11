@@ -20,7 +20,7 @@ def http_get_json(url):
 
 def http_download(url, dest_path):
     # Some URLs might need a user-agent if they block default python-urllib
-    req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+    req = urllib.request.Request(url)
     with urllib.request.urlopen(req) as response:
         assert response.status == 200, f"Failed to download image. Status code: {response.status}"
         content_type = response.info().get('Content-Type', '')
@@ -34,16 +34,12 @@ def getNumberOfMonitors():
     
     # Try Hyprland first
     if "hyprland" in desktop_session:
-        try:
-            output = subprocess.check_output(["hyprctl", "monitors", "-j"], text=True)
-            monitors_data = json.loads(output)
-            # Filter only active monitors
-            return [{"w": m["width"], "h": m["height"], "x": m["x"], "y": m["y"], "name": m["name"]} for m in monitors_data if not m.get("disabled", False)]
-        except Exception as e:
-            print(f"Failed to get Hyprland monitors: {e}")
-
-    # Fallback to xrandr
-    try:
+        output = subprocess.check_output(["hyprctl", "monitors", "-j"], text=True)
+        monitors_data = json.loads(output)
+        # Filter only active monitors
+        return [{"w": m["width"], "h": m["height"], "x": m["x"], "y": m["y"], "name": m["name"]} for m in monitors_data if not m.get("disabled", False)]
+    else:
+        # Fallback to xrandr
         monitors = []
         xrandrOutput = subprocess.check_output(["xrandr", "--query"], text=True)
         pattern = re.compile(r"(\d+)x(\d+)\+(\d+)\+(\d+)")
@@ -53,12 +49,7 @@ def getNumberOfMonitors():
                 if match:
                     w, h, x, y = map(int, match.groups())
                     monitors.append({"w": w, "h": h, "x": x, "y": y, "name": None})
-        if monitors:
-            return monitors
-    except Exception as e:
-        print(f"Failed to get xrandr monitors: {e}")
-
-    return []
+        return monitors
 
 def getAPODImageURLs(date, number_of_days_to_look_back):
     assert isinstance(date, datetime.datetime), "Date is not a datetime object"
@@ -188,7 +179,7 @@ def main():
 
     # look back a few extra days in case the APOD is a video
     number_of_days_to_look_back = len(monitors) + 2
-    
+
     apodImageURLs = getAPODImageURLs(datetime.datetime.now(), number_of_days_to_look_back)
     print(f"Found {len(apodImageURLs)} images to download")
 
