@@ -32,14 +32,12 @@ def http_download(url, dest_path):
 def getNumberOfMonitors():
     desktop_session = os.environ.get("XDG_CURRENT_DESKTOP", "").lower()
     
-    # Try Hyprland first
     if "hyprland" in desktop_session:
         output = subprocess.check_output(["hyprctl", "monitors", "-j"], text=True)
         monitors_data = json.loads(output)
         # Filter only active monitors
         return [{"w": m["width"], "h": m["height"], "x": m["x"], "y": m["y"], "name": m["name"]} for m in monitors_data if not m.get("disabled", False)]
     else:
-        # Fallback to xrandr
         monitors = []
         xrandrOutput = subprocess.check_output(["xrandr", "--query"], text=True)
         pattern = re.compile(r"(\d+)x(\d+)\+(\d+)\+(\d+)")
@@ -77,25 +75,27 @@ def getAPODImageURLs(date, number_of_days_to_look_back):
 def downloadImages(apodImageURLs):
     assert len(apodImageURLs) > 0, "No APOD images to download"
     
-    tempDir = IMAGES_PATH
-    os.makedirs(tempDir, exist_ok=True)
-    pathsToImages = []
-    
-    for url in apodImageURLs:
-        imageName = url.split("/")[-1]
+    def downloadImage(apodImageURL, tempDir):
+        imageName = apodImageURL.split("/")[-1]
         dest = os.path.join(tempDir, imageName)
         if os.path.exists(dest):
-            pathsToImages.append(dest)
-            continue
-            
+            return dest
         try:
-            print(f"Downloading {url}...")
-            http_download(url, dest)
-            pathsToImages.append(dest)
+            print(f"Downloading {apodImageURL}...")
+            http_download(apodImageURL, dest)
+            return dest
         except Exception as e:
-            print(f"Failed to download {url}: {e}")
-            continue
-            
+            print(f"Failed to download {apodImageURL}: {e}")
+            return None
+
+    tempDir = IMAGES_PATH
+    os.makedirs(tempDir, exist_ok=True)
+    pathsToImages = [
+        downloadImage(apodImageURL, tempDir) for apodImageURL in apodImageURLs
+    ]
+    # Filter out None values (failed downloads)
+    pathsToImages = [path for path in pathsToImages if path is not None]
+    
     assert len(pathsToImages) > 0, "No images downloaded"
     return pathsToImages
 
@@ -135,11 +135,7 @@ def createCombinedWallpaper(pathsToImages, monitors):
 def setWallpaper(pathsToImages, monitors):
     assert len(pathsToImages) > 0, "No images to set as wallpaper"
     
-    desktop_session = os.environ.get("XDG_CURRENT_DESKTOP", "").lower()
-    gdm_session = os.environ.get("GDMSESSION", "").lower()
-    is_gnome = "gnome" in desktop_session and "i3" not in gdm_session
-
-    if "hyprland" in desktop_session:
+    def setWallpaperHyprland(pathsToImages, monitors):
         # Kill existing swaybg
         subprocess.run(["pkill", "swaybg"])
         
@@ -151,8 +147,8 @@ def setWallpaper(pathsToImages, monitors):
                 subprocess.Popen(["swaybg", "-o", m["name"], "-i", img, "-m", "fill"])
             else:
                 subprocess.Popen(["swaybg", "-i", img, "-m", "fill"])
-            
-    elif is_gnome:
+
+    def setWallpaperGnome(pathsToImages, monitors):
         print("Using GNOME-specific wallpaper setting")
         # For GNOME, we try to use PIL if available to create a spanned wallpaper
         try:
@@ -167,6 +163,15 @@ def setWallpaper(pathsToImages, monitors):
             subprocess.run(["gsettings", "set", "org.gnome.desktop.background", "picture-options", "zoom"])
             subprocess.run(["gsettings", "set", "org.gnome.desktop.background", "picture-uri", uri])
             subprocess.run(["gsettings", "set", "org.gnome.desktop.background", "picture-uri-dark", uri])
+
+    desktop_session = os.environ.get("XDG_CURRENT_DESKTOP", "").lower()
+    gdm_session = os.environ.get("GDMSESSION", "").lower()
+    is_gnome = "gnome" in desktop_session and "i3" not in gdm_session
+
+    if "hyprland" in desktop_session:
+        setWallpaperHyprland(pathsToImages, monitors)
+    elif is_gnome:
+        setWallpaperGnome(pathsToImages, monitors)
     else:
         print("Using feh to set wallpaper")
         assert "DISPLAY" in os.environ or "WAYLAND_DISPLAY" in os.environ, "No display found"
@@ -179,7 +184,7 @@ def main():
 
     # look back a few extra days in case the APOD is a video
     number_of_days_to_look_back = len(monitors) + 2
-
+    
     apodImageURLs = getAPODImageURLs(datetime.datetime.now(), number_of_days_to_look_back)
     print(f"Found {len(apodImageURLs)} images to download")
 
