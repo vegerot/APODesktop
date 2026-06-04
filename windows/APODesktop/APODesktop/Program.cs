@@ -33,10 +33,10 @@ List<MonitorID> getScreens()
     List<MonitorID> screens = [];
     for (uint i = 0; i < monitor_count; ++i)
     {
-        MonitorID monitor = null!;
+        MonitorID? monitor = null;
         Debug.Assert(pDesktopWallpaper.GetMonitorDevicePathAt(i, ref monitor) == HRESULT.S_OK);
         Debug.Assert(monitor != null);
-        screens.Add(monitor);
+        screens.Add(monitor!);
     }
     return screens;
 
@@ -52,7 +52,7 @@ List<URL> getApodImageURLs(DateOnly since)
         BaseAddress = nasa_api_url,
     };
 
-    List<ApodGetPicsResponse> apod_response = httpClient.GetFromJsonAsync("", ApodApiJsonContext.Default.ListApodGetPicsResponse).Result ?? throw new InvalidOperationException("Failed to load APOD images.");
+    List<ApodGetPicsResponse> apod_response = httpClient.GetFromJsonAsync("", ApodApiJsonContext.Default.ListApodGetPicsResponse).Result ?? throw new InvalidOperationException("APOD API returned no data.");
 
     List<URL> urls = [];
 
