@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System.Net;
+using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
@@ -53,7 +52,7 @@ List<URL> getApodImageURLs(DateOnly since)
         BaseAddress = nasa_api_url,
     };
 
-    List<ApodGetPicsResponse> apod_response = httpClient.GetFromJsonAsync<List<ApodGetPicsResponse>>("").Result ?? throw new InvalidOperationException("Failed to load APOD images.");
+    List<ApodGetPicsResponse> apod_response = httpClient.GetFromJsonAsync("", ApodApiJsonContext.Default.ListApodGetPicsResponse).Result ?? throw new InvalidOperationException("Failed to load APOD images.");
 
     List<URL> urls = [];
 
@@ -78,13 +77,14 @@ List<FilePath> downloadImagesAtUrls(List<URL> urls)
 {
     List<FilePath> images = [];
     var tempDirectory = GetTemporaryDirectory();
+    using HttpClient httpClient = new();
     for (int i = 0; i < urls.Count; ++i)
     {
         URL url = urls[i];
         String downloadedImageName = $"{i}.jpeg";
         FilePath pathToDownloadedImage = new(tempDirectory + "\\" + downloadedImageName);
-        // TODO: Download pictures in parallel.  Maybe `HttpClient` instead of `WebClient`?
-        new WebClient().DownloadFile(url.ToString(), pathToDownloadedImage.ToString());
+        byte[] imageBytes = httpClient.GetByteArrayAsync(url.ToString()).Result;
+        File.WriteAllBytes(pathToDownloadedImage.ToString(), imageBytes);
         images.Add(pathToDownloadedImage);
     }
     return images;
@@ -129,6 +129,12 @@ public sealed record class ApodGetPicsResponse
 
     [JsonPropertyName("hdurl")]
     public string? HdUrl { get; init; }
+}
+
+[JsonSourceGenerationOptions(PropertyNameCaseInsensitive = true)]
+[JsonSerializable(typeof(List<ApodGetPicsResponse>))]
+internal partial class ApodApiJsonContext : JsonSerializerContext
+{
 }
 
 /**IGNORE EVERYTHING PAST HERE */
