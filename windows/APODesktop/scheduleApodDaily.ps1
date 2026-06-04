@@ -7,4 +7,8 @@ $task = New-ScheduledTask -Action $action -Principal $principal -Trigger $trigge
 $name = 'APOD-Update Wallpaper daily'
 $description = 'from https://github.com/vegerot/APODesktop'
 
+if (Get-ScheduledTask -TaskName $name -ErrorAction SilentlyContinue) {
+    Unregister-ScheduledTask -TaskName $name -Confirm:$false
+}
+
 Register-ScheduledTask $name -InputObject $task
