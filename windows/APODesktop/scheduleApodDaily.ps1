@@ -1,4 +1,4 @@
-$apod =  Convert-Path .\APODesktop\bin\Debug\net7.0\APODesktop.exe
+$apod =  Convert-Path .\APODesktop\bin\Debug\net10.0-windows\APODesktop.exe
 $action = New-ScheduledTaskAction -Execute $apod
 $trigger = New-ScheduledTaskTrigger -Daily -At '12:00 PM'
 $principal = New-ScheduledTaskPrincipal -UserId (whoami)
