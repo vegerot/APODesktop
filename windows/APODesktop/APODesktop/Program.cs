@@ -2,6 +2,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Runtime.InteropServices;
+using System.Text.Json.Serialization;
 
 using MonitorID = System.String;
 
@@ -58,11 +59,11 @@ List<URL> getApodImageURLs(DateOnly since)
 
     foreach (var apod in apod_response)
     {
-        if (apod.media_type != "image")
+        if (apod.MediaType != "image")
         {
             continue;
         }
-        String image_url = apod.hdurl ?? apod.url;
+        String image_url = apod.HdUrl ?? apod.Url;
 
         urls.Add(new URL(image_url));
     }
@@ -108,37 +109,27 @@ void SetTheseWallpapersToTheseImages(List<MonitorID> monitors, List<FilePath> pa
 
 }
 
-class FilePath
+readonly record struct FilePath(string Value)
 {
-    private readonly String _string;
-
-    public FilePath(string path)
-    {
-        this._string = path;
-    }
-
-    override public String ToString()
-    {
-        return this._string;
-    }
+    override public String ToString() => this.Value;
 }
 
-class URL
+readonly record struct URL(string Value)
 {
-    private readonly String _string;
-
-    public URL(string url)
-    {
-        this._string = url;
-    }
-
-    override public String ToString()
-    {
-        return this._string;
-    }
+    override public String ToString() => this.Value;
 }
 
-record class ApodGetPicsResponse(string media_type, string url, string? hdurl);
+public sealed record class ApodGetPicsResponse
+{
+    [JsonPropertyName("media_type")]
+    public required string MediaType { get; init; }
+
+    [JsonPropertyName("url")]
+    public required string Url { get; init; }
+
+    [JsonPropertyName("hdurl")]
+    public string? HdUrl { get; init; }
+}
 
 /**IGNORE EVERYTHING PAST HERE */
 
