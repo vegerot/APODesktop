@@ -31,7 +31,7 @@ List<MonitorID> getScreens()
     pDesktopWallpaper.GetMonitorDevicePathCount(ref monitor_count);
     Debug.Assert(monitor_count > 0);
 
-    List<MonitorID> screens = new List<MonitorID>();
+    List<MonitorID> screens = [];
     for (uint i = 0; i < monitor_count; ++i)
     {
         MonitorID monitor = null!;
@@ -55,11 +55,11 @@ List<URL> getApodImageURLs(DateOnly since)
 
     List<ApodGetPicsResponse> apod_response = httpClient.GetFromJsonAsync<List<ApodGetPicsResponse>>("").Result ?? throw new InvalidOperationException("Failed to load APOD images.");
 
-    List<URL> urls = new();
+    List<URL> urls = [];
 
     foreach (var apod in apod_response)
     {
-        if (apod.MediaType != "image")
+        if (apod is not { MediaType: "image" })
         {
             continue;
         }
@@ -76,7 +76,7 @@ List<URL> getApodImageURLs(DateOnly since)
 
 List<FilePath> downloadImagesAtUrls(List<URL> urls)
 {
-    List<FilePath> images = new();
+    List<FilePath> images = [];
     var tempDirectory = GetTemporaryDirectory();
     for (int i = 0; i < urls.Count; ++i)
     {
