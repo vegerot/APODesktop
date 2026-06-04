@@ -9,16 +9,21 @@ return main();
 int main()
 {
     List<MonitorID> monitors = getScreens();
+    Console.WriteLine($"Detected {monitors.Count} monitors");
 
     int number_of_monitors = monitors.Count;
 
     /// shit happens (sometimes it's a video)
     int number_of_days_to_look_back = number_of_monitors + 2;
     DateOnly date_n_days_ago = DateOnly.FromDateTime(DateTime.Now.AddDays(-1 * number_of_days_to_look_back));
+    Console.WriteLine($"Looking back {number_of_days_to_look_back} days from {date_n_days_ago}");
     List<URL> apodImageURLs = getApodImageURLs(date_n_days_ago);
+    Console.WriteLine($"Found {apodImageURLs.Count} images to download");
     List<FilePath> pathsToImages = downloadImagesAtUrls(apodImageURLs.Take(number_of_monitors).ToList());
+    Console.WriteLine($"Downloaded {pathsToImages.Count} images");
 
     SetTheseWallpapersToTheseImages(monitors, pathsToImages);
+    Console.WriteLine($"Set wallpaper for {monitors.Count} monitors");
 
     return 0;
 }
@@ -83,6 +88,7 @@ List<FilePath> downloadImagesAtUrls(List<URL> urls)
         URL url = urls[i];
         String downloadedImageName = $"{i}.jpeg";
         FilePath pathToDownloadedImage = new(tempDirectory + "\\" + downloadedImageName);
+        Console.WriteLine($"Downloading {url}...");
         byte[] imageBytes = httpClient.GetByteArrayAsync(url.ToString()).Result;
         File.WriteAllBytes(pathToDownloadedImage.ToString(), imageBytes);
         images.Add(pathToDownloadedImage);
@@ -102,9 +108,8 @@ void SetTheseWallpapersToTheseImages(List<MonitorID> monitors, List<FilePath> pa
     IDesktopWallpaper pDesktopWallpaper = (IDesktopWallpaper)(new DesktopWallpaperClass());
     foreach (var (monitor, image) in monitors.Zip(pathsToWallpapers))
     {
-
+        Console.WriteLine($"Setting wallpaper for {monitor} to {image}");
         Debug.Assert(pDesktopWallpaper.SetWallpaper(monitor, image.ToString()) == HRESULT.S_OK);
-
     }
 
 }
