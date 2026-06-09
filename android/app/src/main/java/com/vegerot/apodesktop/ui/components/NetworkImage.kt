@@ -21,9 +21,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -37,6 +39,7 @@ fun NetworkImage(
     var bitmap by remember(url) { mutableStateOf<ImageBitmap?>(null) }
     var isLoading by remember(url) { mutableStateOf(true) }
     var isError by remember(url) { mutableStateOf(false) }
+    val context = LocalContext.current
 
     LaunchedEffect(url) {
         isLoading = true
@@ -47,8 +50,13 @@ fun NetworkImage(
                 connection.doInput = true
                 connection.connect()
                 if (connection.responseCode in 200..299) {
-                    val input = connection.inputStream
-                    val bmp = BitmapFactory.decodeStream(input)
+                    val file = File(context.cacheDir, "apod_today.jpg")
+                    connection.inputStream.use { input ->
+                        file.outputStream().use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    val bmp = BitmapFactory.decodeFile(file.absolutePath)
                     bitmap = bmp?.asImageBitmap()
                 } else {
                     isError = true

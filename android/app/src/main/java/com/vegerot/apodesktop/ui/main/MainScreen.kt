@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -82,6 +83,21 @@ fun MainScreen(
             CenterAlignedTopAppBar(
                 title = { Text("APODesktop", fontWeight = FontWeight.Bold) },
                 actions = {
+                    IconButton(
+                        onClick = {
+                            val success = ApodDesktop.shareApodImage(
+                                context,
+                                (state as? MainScreenUiState.Success)?.entry?.title ?: "",
+                                (state as? MainScreenUiState.Success)?.entry?.date ?: "",
+                            )
+                            if (!success) {
+                                Toast.makeText(context, "Image is still loading. Please wait.", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        enabled = state is MainScreenUiState.Success,
+                    ) {
+                        Icon(Icons.Default.Share, contentDescription = "Share APOD")
+                    }
                     IconButton(onClick = { viewModel.refreshApod() }) {
                         Icon(Icons.Default.Refresh, contentDescription = "Refresh APOD")
                     }
@@ -181,7 +197,7 @@ internal fun ApodContent(
             .verticalScroll(rememberScrollState()),
     ) {
         NetworkImage(
-            url = entry.url,
+            url = entry.hdUrl ?: entry.url,
             contentDescription = entry.title,
             modifier = Modifier
                 .fillMaxWidth()

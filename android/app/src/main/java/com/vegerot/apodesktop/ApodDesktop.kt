@@ -8,10 +8,12 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.content.FileProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
@@ -123,6 +125,46 @@ object ApodDesktop {
             notificationManager.notify(1, builder.build())
         } catch (e: SecurityException) {
             Log.e(TAG, "Notification permission not granted", e)
+        }
+    }
+
+    fun shareApodImage(context: Context, title: String, date: String): Boolean {
+        try {
+            val file = File(context.cacheDir, "apod_today.jpg")
+            if (!file.exists()) {
+                return false
+            }
+
+            val authority = "${context.packageName}.fileprovider"
+            val uri = FileProvider.getUriForFile(context, authority, file)
+
+            val formattedDate = date.replace("-", "").let {
+                if (it.length >= 8) it.substring(2) else ""
+            }
+            val detailsUrl = if (formattedDate.isNotEmpty()) {
+                "https://apod.nasa.gov/apod/ap$formattedDate.html"
+            } else {
+                "https://apod.nasa.gov/apod/"
+            }
+
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "image/jpeg"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                putExtra(
+                    Intent.EXTRA_TEXT,
+                    "Check out NASA's Astronomy Picture of the Day: \"$title\"\n$detailsUrl",
+                )
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+
+            val chooserIntent = Intent.createChooser(shareIntent, "Share APOD").apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(chooserIntent)
+            return true
+        } catch (e: Exception) {
+            Log.e(TAG, "Error sharing APOD image", e)
+            return false
         }
     }
 }
