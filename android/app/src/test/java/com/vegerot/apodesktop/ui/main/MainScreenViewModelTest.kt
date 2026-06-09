@@ -1,6 +1,6 @@
-package com.example.apodesktop.ui.main
+package com.vegerot.apodesktop.ui.main
 
-import com.example.apodesktop.data.DataRepository
+import com.vegerot.apodesktop.data.DataRepository
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first

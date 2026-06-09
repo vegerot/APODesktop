@@ -1,4 +1,4 @@
-package com.example.apodesktop
+package com.vegerot.apodesktop
 
 import android.app.WallpaperManager
 import android.content.Context

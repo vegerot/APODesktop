@@ -1,4 +1,4 @@
-package com.example.apodesktop.data
+package com.vegerot.apodesktop.data
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow

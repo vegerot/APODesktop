@@ -1,4 +1,4 @@
-package com.example.apodesktop
+package com.vegerot.apodesktop
 
 import android.content.Context
 import androidx.work.CoroutineWorker

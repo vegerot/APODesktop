@@ -1,4 +1,4 @@
-package com.example.apodesktop.ui.main
+package com.vegerot.apodesktop.ui.main
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Text
@@ -9,8 +9,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.NavKey
-import com.example.apodesktop.data.DefaultDataRepository
-import com.example.apodesktop.theme.APODesktopTheme
+import com.vegerot.apodesktop.data.DefaultDataRepository
+import com.vegerot.apodesktop.theme.APODesktopTheme
 
 @Composable
 fun MainScreen(

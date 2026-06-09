@@ -1,4 +1,4 @@
-package com.example.apodesktop.theme
+package com.vegerot.apodesktop.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme

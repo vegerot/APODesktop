@@ -1,4 +1,4 @@
-package com.example.apodesktop
+package com.vegerot.apodesktop
 
 import android.os.Bundle
 import android.widget.Toast
@@ -32,7 +32,7 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
-import com.example.apodesktop.theme.APODesktopTheme
+import com.vegerot.apodesktop.theme.APODesktopTheme
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 

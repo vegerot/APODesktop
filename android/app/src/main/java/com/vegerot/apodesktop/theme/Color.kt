@@ -1,4 +1,4 @@
-package com.example.apodesktop.theme
+package com.vegerot.apodesktop.theme
 
 import androidx.compose.ui.graphics.Color
 

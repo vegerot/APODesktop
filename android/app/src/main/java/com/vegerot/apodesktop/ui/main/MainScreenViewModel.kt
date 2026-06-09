@@ -1,9 +1,9 @@
-package com.example.apodesktop.ui.main
+package com.vegerot.apodesktop.ui.main
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.apodesktop.data.DataRepository
-import com.example.apodesktop.ui.main.MainScreenUiState.Success
+import com.vegerot.apodesktop.data.DataRepository
+import com.vegerot.apodesktop.ui.main.MainScreenUiState.Success
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch

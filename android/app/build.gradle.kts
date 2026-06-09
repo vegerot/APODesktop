@@ -5,10 +5,10 @@ plugins {
 }
 
 android {
-    namespace = "com.example.apodesktop"
+    namespace = "com.vegerot.apodesktop"
     compileSdk = 36
     defaultConfig {
-        applicationId = "com.example.apodesktop"
+        applicationId = "com.vegerot.apodesktop"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
