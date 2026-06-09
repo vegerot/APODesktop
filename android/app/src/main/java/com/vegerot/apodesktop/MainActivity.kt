@@ -1,10 +1,14 @@
 package com.vegerot.apodesktop
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,7 +30,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
@@ -60,8 +66,54 @@ fun ApodScreen() {
     // For V1, we just default the switch to false, in a real app we'd read from SharedPreferences
     var isDailyEnabled by remember { mutableStateOf(false) }
 
+    ApodScreen(
+        isDailyEnabled = isDailyEnabled,
+        onDailyEnabledChange = { enabled ->
+            isDailyEnabled = enabled
+            val workManager = WorkManager.getInstance(context)
+            if (enabled) {
+                onRequestNotificationPermission()
+                val constraints = Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build()
+                val workRequest = PeriodicWorkRequestBuilder<ApodWorker>(24, TimeUnit.HOURS)
+                    .setConstraints(constraints)
+                    .build()
+                workManager.enqueueUniquePeriodicWork(
+                    "DailyApodWorker",
+                    ExistingPeriodicWorkPolicy.UPDATE,
+                    workRequest
+                )
+                Toast.makeText(context, "Daily updates enabled", Toast.LENGTH_SHORT).show()
+            } else {
+                workManager.cancelUniqueWork("DailyApodWorker")
+                Toast.makeText(context, "Daily updates disabled", Toast.LENGTH_SHORT).show()
+            }
+        },
+        onUpdateNowClick = {
+            onRequestNotificationPermission()
+            Toast.makeText(context, "Updating wallpaper...", Toast.LENGTH_SHORT).show()
+            coroutineScope.launch {
+                val success = ApodDesktop.updateWallpaper(context)
+                if (success) {
+                    Toast.makeText(context, "Wallpaper updated successfully", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(context, "Failed to update wallpaper", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    )
+}
+
+@Composable
+internal fun ApodScreen(
+    isDailyEnabled: Boolean,
+    onDailyEnabledChange: (Boolean) -> Unit,
+    onUpdateNowClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -80,44 +132,26 @@ fun ApodScreen() {
             Text(text = "Enable Daily Wallpaper")
             Switch(
                 checked = isDailyEnabled,
-                onCheckedChange = { enabled ->
-                    isDailyEnabled = enabled
-                    val workManager = WorkManager.getInstance(context)
-                    if (enabled) {
-                        val constraints = Constraints.Builder()
-                            .setRequiredNetworkType(NetworkType.CONNECTED)
-                            .build()
-                        val workRequest = PeriodicWorkRequestBuilder<ApodWorker>(24, TimeUnit.HOURS)
-                            .setConstraints(constraints)
-                            .build()
-                        workManager.enqueueUniquePeriodicWork(
-                            "DailyApodWorker",
-                            ExistingPeriodicWorkPolicy.UPDATE,
-                            workRequest
-                        )
-                        Toast.makeText(context, "Daily updates enabled", Toast.LENGTH_SHORT).show()
-                    } else {
-                        workManager.cancelUniqueWork("DailyApodWorker")
-                        Toast.makeText(context, "Daily updates disabled", Toast.LENGTH_SHORT).show()
-                    }
-                }
+                onCheckedChange = onDailyEnabledChange
             )
         }
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        Button(onClick = {
-            Toast.makeText(context, "Updating wallpaper...", Toast.LENGTH_SHORT).show()
-            coroutineScope.launch {
-                val success = ApodDesktop.updateWallpaper(context)
-                if (success) {
-                    Toast.makeText(context, "Wallpaper updated successfully", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(context, "Failed to update wallpaper", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }) {
+        Button(onClick = onUpdateNowClick) {
             Text("Update Now")
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun ApodScreenPreview() {
+    APODesktopTheme {
+        ApodScreen(
+            isDailyEnabled = false,
+            onDailyEnabledChange = {},
+            onUpdateNowClick = {}
+        )
     }
 }
