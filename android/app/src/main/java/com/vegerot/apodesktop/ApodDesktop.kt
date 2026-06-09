@@ -8,7 +8,6 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.util.Log
-import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -93,7 +92,6 @@ object ApodDesktop {
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     private fun showNotification(context: Context) {
         val channelId = "wallpaper_updates"
         val channelName = "Wallpaper Updates"
