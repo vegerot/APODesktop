@@ -29,9 +29,9 @@ object ApodDesktop {
     private const val API_KEY = "JvhDwQU1Uhv7yfaQTSqcsncZjwF5ZJR6McrzVE4f"
     private const val NASA_API_URL = "https://api.nasa.gov/planetary/apod"
 
-    suspend fun fetchRecentApod(): ApodEntry? = withContext(Dispatchers.IO) {
+    suspend fun fetchRecentImageApods(): List<ApodEntry> = withContext(Dispatchers.IO) {
         try {
-            val daysToLookBack = 3
+            val daysToLookBack = 5
             val calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
             calendar.add(Calendar.DAY_OF_YEAR, -daysToLookBack)
 
@@ -48,40 +48,66 @@ object ApodDesktop {
 
             if (connection.responseCode !in 200..299) {
                 Log.e(TAG, "API request failed with response code: ${connection.responseCode}")
-                return@withContext null
+                return@withContext emptyList()
             }
 
             val responseString = connection.inputStream.bufferedReader().use { it.readText() }
             val entries = ApodEntry.fromJsonArray(responseString)
-            entries.lastOrNull { it.mediaType == "image" }
+            entries.filter { it.mediaType == "image" }
         } catch (e: Exception) {
             Log.e(TAG, "Error fetching APOD", e)
-            null
+            emptyList()
         }
+    }
+
+    suspend fun fetchRecentApod(): ApodEntry? {
+        return fetchRecentImageApods().lastOrNull()
     }
 
     suspend fun updateWallpaper(context: Context): Boolean = withContext(Dispatchers.IO) {
         try {
-            val entry = fetchRecentApod() ?: return@withContext false
-            val imageUrl = entry.hdUrl ?: entry.url
+            val imageEntries = fetchRecentImageApods()
+            if (imageEntries.isEmpty()) return@withContext false
 
-            Log.d(TAG, "Downloading image from: $imageUrl")
-            val imageConnection = URL(imageUrl).openConnection() as HttpURLConnection
-            imageConnection.requestMethod = "GET"
+            val todayEntry = imageEntries.last()
+            val yesterdayEntry = if (imageEntries.size >= 2) imageEntries[imageEntries.size - 2] else todayEntry
 
-            if (imageConnection.responseCode !in 200..299) {
-                Log.e(TAG, "Image download failed with response code: ${imageConnection.responseCode}")
-                return@withContext false
+            val wallpaperManager = WallpaperManager.getInstance(context)
+            var success = false
+
+            // Set Homescreen (today's APOD)
+            val todayImageUrl = todayEntry.hdUrl ?: todayEntry.url
+            Log.d(TAG, "Downloading today's image from: $todayImageUrl")
+            val todayConnection = URL(todayImageUrl).openConnection() as HttpURLConnection
+            todayConnection.requestMethod = "GET"
+
+            if (todayConnection.responseCode in 200..299) {
+                Log.d(TAG, "Setting homescreen wallpaper...")
+                wallpaperManager.setStream(todayConnection.inputStream, null, true, WallpaperManager.FLAG_SYSTEM)
+                success = true
+            } else {
+                Log.e(TAG, "Today's image download failed with response code: ${todayConnection.responseCode}")
             }
 
-            Log.d(TAG, "Setting wallpaper...")
-            val inputStream: InputStream = imageConnection.inputStream
-            val wallpaperManager = WallpaperManager.getInstance(context)
-            wallpaperManager.setStream(inputStream)
+            // Set Lockscreen (yesterday's APOD)
+            val yesterdayImageUrl = yesterdayEntry.hdUrl ?: yesterdayEntry.url
+            Log.d(TAG, "Downloading yesterday's image from: $yesterdayImageUrl")
+            val yesterdayConnection = URL(yesterdayImageUrl).openConnection() as HttpURLConnection
+            yesterdayConnection.requestMethod = "GET"
 
-            Log.d(TAG, "Wallpaper updated successfully")
-            showNotification(context)
-            true
+            if (yesterdayConnection.responseCode in 200..299) {
+                Log.d(TAG, "Setting lockscreen wallpaper...")
+                wallpaperManager.setStream(yesterdayConnection.inputStream, null, true, WallpaperManager.FLAG_LOCK)
+                success = true
+            } else {
+                Log.e(TAG, "Yesterday's image download failed with response code: ${yesterdayConnection.responseCode}")
+            }
+
+            if (success) {
+                Log.d(TAG, "Wallpaper(s) updated successfully")
+                showNotification(context)
+            }
+            success
         } catch (e: Exception) {
             Log.e(TAG, "Error updating wallpaper", e)
             false
