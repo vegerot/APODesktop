@@ -23,6 +23,8 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.vegerot.apodesktop.executeWithRetry
+import com.vegerot.apodesktop.setupConnection
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -46,20 +48,22 @@ fun NetworkImage(
         isError = false
         withContext(Dispatchers.IO) {
             try {
-                val connection = URL(url).openConnection() as HttpURLConnection
-                connection.doInput = true
-                connection.connect()
-                if (connection.responseCode in 200..299) {
-                    val file = File(context.cacheDir, "apod_today.jpg")
-                    connection.inputStream.use { input ->
-                        file.outputStream().use { output ->
-                            input.copyTo(output)
+                executeWithRetry(times = 3) {
+                    val connection = setupConnection(url, timeoutMs = 5000)
+                    connection.doInput = true
+                    connection.connect()
+                    if (connection.responseCode in 200..299) {
+                        val file = File(context.cacheDir, "apod_today.jpg")
+                        connection.inputStream.use { input ->
+                            file.outputStream().use { output ->
+                                input.copyTo(output)
+                            }
                         }
+                        val bmp = BitmapFactory.decodeFile(file.absolutePath)
+                        bitmap = bmp?.asImageBitmap()
+                    } else {
+                        throw Exception("Failed to load image: ${connection.responseCode}")
                     }
-                    val bmp = BitmapFactory.decodeFile(file.absolutePath)
-                    bitmap = bmp?.asImageBitmap()
-                } else {
-                    isError = true
                 }
             } catch (e: Exception) {
                 isError = true
