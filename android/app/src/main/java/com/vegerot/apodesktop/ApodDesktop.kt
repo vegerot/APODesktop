@@ -27,9 +27,8 @@ object ApodDesktop {
     private const val API_KEY = "JvhDwQU1Uhv7yfaQTSqcsncZjwF5ZJR6McrzVE4f"
     private const val NASA_API_URL = "https://api.nasa.gov/planetary/apod"
 
-    suspend fun updateWallpaper(context: Context): Boolean = withContext(Dispatchers.IO) {
+    suspend fun fetchRecentApod(): ApodEntry? = withContext(Dispatchers.IO) {
         try {
-            // Look back a few days just in case recent ones are videos
             val daysToLookBack = 3
             val calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
             calendar.add(Calendar.DAY_OF_YEAR, -daysToLookBack)
@@ -47,20 +46,22 @@ object ApodDesktop {
 
             if (connection.responseCode !in 200..299) {
                 Log.e(TAG, "API request failed with response code: ${connection.responseCode}")
-                return@withContext false
+                return@withContext null
             }
 
             val responseString = connection.inputStream.bufferedReader().use { it.readText() }
+            val entries = ApodEntry.fromJsonArray(responseString)
+            entries.lastOrNull { it.mediaType == "image" }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error fetching APOD", e)
+            null
+        }
+    }
 
-            // Iterate backwards to get the most recent image
-            val imageUrl = ApodEntry.fromJsonArray(responseString)
-                .lastOrNull { it.mediaType == "image" }
-                ?.let { it.hdUrl ?: it.url }
-
-            if (imageUrl == null) {
-                Log.e(TAG, "No image found in recent APOD entries")
-                return@withContext false
-            }
+    suspend fun updateWallpaper(context: Context): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val entry = fetchRecentApod() ?: return@withContext false
+            val imageUrl = entry.hdUrl ?: entry.url
 
             Log.d(TAG, "Downloading image from: $imageUrl")
             val imageConnection = URL(imageUrl).openConnection() as HttpURLConnection
@@ -124,25 +125,31 @@ object ApodDesktop {
             Log.e(TAG, "Notification permission not granted", e)
         }
     }
+}
 
-    private data class ApodEntry(
-        val mediaType: String,
-        val url: String,
-        val hdUrl: String?,
-    ) {
-        companion object {
-            fun fromJsonArray(jsonString: String): List<ApodEntry> {
-                val jsonArray = JSONArray(jsonString)
-                return (0 until jsonArray.length()).map { i ->
-                    fromJson(jsonArray.getJSONObject(i))
-                }
+data class ApodEntry(
+    val title: String,
+    val explanation: String,
+    val date: String,
+    val mediaType: String,
+    val url: String,
+    val hdUrl: String?,
+) {
+    companion object {
+        fun fromJsonArray(jsonString: String): List<ApodEntry> {
+            val jsonArray = JSONArray(jsonString)
+            return (0 until jsonArray.length()).map { i ->
+                fromJson(jsonArray.getJSONObject(i))
             }
-
-            fun fromJson(json: JSONObject): ApodEntry = ApodEntry(
-                mediaType = json.optString("media_type"),
-                url = json.optString("url"),
-                hdUrl = json.optString("hdurl").takeIf { it.isNotEmpty() },
-            )
         }
+
+        fun fromJson(json: JSONObject): ApodEntry = ApodEntry(
+            title = json.optString("title"),
+            explanation = json.optString("explanation"),
+            date = json.optString("date"),
+            mediaType = json.optString("media_type"),
+            url = json.optString("url"),
+            hdUrl = json.optString("hdurl").takeIf { it.isNotEmpty() },
+        )
     }
 }

@@ -3,6 +3,7 @@ package com.vegerot.apodesktop.ui.main
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import com.vegerot.apodesktop.ApodEntry
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -14,13 +15,29 @@ class MainScreenTest {
 
     @Before
     fun setup() {
-        composeTestRule.setContent { MainScreen(FAKE_DATA) }
+        composeTestRule.setContent {
+            ApodContent(
+                entry = FAKE_ENTRY,
+                isDailyEnabled = false,
+                isUpdatingWallpaper = false,
+                onDailyEnabledChange = {},
+                onUpdateNowClick = {},
+            )
+        }
     }
 
     @Test
     fun firstItem_exists() {
-        FAKE_DATA.forEach { composeTestRule.onNodeWithText("Hello $it!").assertExists() }
+        composeTestRule.onNodeWithText(FAKE_ENTRY.title).assertExists()
+        composeTestRule.onNodeWithText(FAKE_ENTRY.explanation).assertExists()
     }
 }
 
-private val FAKE_DATA = listOf("Sample1", "Sample2", "Sample3")
+private val FAKE_ENTRY = ApodEntry(
+    title = "Test Space Picture",
+    explanation = "This is a test explanation for the APOD item in the compose test.",
+    date = "2026-06-09",
+    mediaType = "image",
+    url = "https://example.com/image.jpg",
+    hdUrl = null,
+)

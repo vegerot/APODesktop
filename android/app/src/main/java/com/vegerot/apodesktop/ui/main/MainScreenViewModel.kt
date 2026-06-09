@@ -2,26 +2,46 @@ package com.vegerot.apodesktop.ui.main
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vegerot.apodesktop.ApodDesktop
+import com.vegerot.apodesktop.ApodEntry
 import com.vegerot.apodesktop.data.DataRepository
-import com.vegerot.apodesktop.ui.main.MainScreenUiState.Success
-import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
-class MainScreenViewModel(dataRepository: DataRepository) : ViewModel() {
-    val uiState: StateFlow<MainScreenUiState> =
-        dataRepository.data
-            .map<List<String>, MainScreenUiState>(::Success)
-            .catch { emit(MainScreenUiState.Error(it)) }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), MainScreenUiState.Loading)
+class MainScreenViewModel(private val dataRepository: DataRepository) : ViewModel() {
+
+    private val _uiState = MutableStateFlow<MainScreenUiState>(MainScreenUiState.Loading)
+    val uiState: StateFlow<MainScreenUiState> = _uiState.asStateFlow()
+
+    val isDailyEnabled: StateFlow<Boolean> = dataRepository.isDailyEnabled
+
+    init {
+        refreshApod()
+    }
+
+    fun refreshApod() {
+        viewModelScope.launch {
+            _uiState.value = MainScreenUiState.Loading
+            val entry = ApodDesktop.fetchRecentApod()
+            if (entry != null) {
+                _uiState.value = MainScreenUiState.Success(entry)
+            } else {
+                _uiState.value = MainScreenUiState.Error("Failed to load today's Astronomy Picture from NASA.")
+            }
+        }
+    }
+
+    fun setDailyEnabled(enabled: Boolean) {
+        dataRepository.setDailyEnabled(enabled)
+    }
 }
 
 sealed interface MainScreenUiState {
-    object Loading : MainScreenUiState
+    data object Loading : MainScreenUiState
 
-    data class Error(val throwable: Throwable) : MainScreenUiState
+    data class Error(val message: String) : MainScreenUiState
 
-    data class Success(val data: List<String>) : MainScreenUiState
+    data class Success(val entry: ApodEntry) : MainScreenUiState
 }

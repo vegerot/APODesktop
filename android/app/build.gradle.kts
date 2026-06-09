@@ -26,6 +26,11 @@ android {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
     }
+    testOptions {
+        unitTests {
+            isReturnDefaultValues = true
+        }
+    }
     buildFeatures {
         compose = true
         aidl = false
@@ -85,6 +90,9 @@ dependencies {
 
     // WorkManager
     implementation(libs.androidx.work.runtime.ktx)
+
+    // Icons
+    implementation(libs.androidx.compose.material.icons)
 }
 
 spotless {
