@@ -5,3 +5,10 @@ plugins {
   alias(libs.plugins.kotlin.serialization) apply false
   id("com.diffplug.spotless") version "6.25.0"
 }
+
+tasks.register<Exec>("buildReleaseApk") {
+    group = "build"
+    description = "Runs the build.sh script to compile and sign the release APK."
+    workingDir = project.rootDir
+    commandLine = listOf("./build.sh")
+}
