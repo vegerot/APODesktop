@@ -11,6 +11,7 @@ import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
+import org.json.JSONObject
 import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
@@ -49,19 +50,11 @@ object ApodDesktop {
             }
 
             val responseString = connection.inputStream.bufferedReader().use { it.readText() }
-            val jsonArray = JSONArray(responseString)
-
-            var imageUrl: String? = null
-
+            
             // Iterate backwards to get the most recent image
-            for (i in jsonArray.length() - 1 downTo 0) {
-                val item = jsonArray.getJSONObject(i)
-                if (item.optString("media_type") == "image") {
-                    imageUrl = item.optString("hdurl").takeIf { it.isNotEmpty() }
-                        ?: item.optString("url")
-                    break
-                }
-            }
+            val imageUrl = ApodEntry.fromJsonArray(responseString)
+                .lastOrNull { it.mediaType == "image" }
+                ?.let { it.hdUrl ?: it.url }
 
             if (imageUrl == null) {
                 Log.e(TAG, "No image found in recent APOD entries")
@@ -128,6 +121,27 @@ object ApodDesktop {
             notificationManager.notify(1, builder.build())
         } catch (e: SecurityException) {
             Log.e(TAG, "Notification permission not granted", e)
+        }
+    }
+
+    private data class ApodEntry(
+        val mediaType: String,
+        val url: String,
+        val hdUrl: String?
+    ) {
+        companion object {
+            fun fromJsonArray(jsonString: String): List<ApodEntry> {
+                val jsonArray = JSONArray(jsonString)
+                return (0 until jsonArray.length()).map { i ->
+                    fromJson(jsonArray.getJSONObject(i))
+                }
+            }
+
+            fun fromJson(json: JSONObject): ApodEntry = ApodEntry(
+                mediaType = json.optString("media_type"),
+                url = json.optString("url"),
+                hdUrl = json.optString("hdurl").takeIf { it.isNotEmpty() }
+            )
         }
     }
 }
