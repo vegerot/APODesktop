@@ -15,6 +15,7 @@ if [[ ! -d "$SDK_PATH" ]]; then
     echo "Error: Android SDK not found at $SDK_PATH. Please set ANDROID_HOME." >&2
     exit 1
 fi
+export ANDROID_HOME="$SDK_PATH"
 
 # Locate build tools (find the latest version under build-tools)
 BUILD_TOOLS_DIR=$(find "${SDK_PATH}/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
