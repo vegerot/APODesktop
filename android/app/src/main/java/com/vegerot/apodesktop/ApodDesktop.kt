@@ -22,6 +22,7 @@ import java.util.TimeZone
 
 object ApodDesktop {
     private const val TAG = "ApodDesktop"
+
     /** TODO: remove secret */
     private const val API_KEY = "JvhDwQU1Uhv7yfaQTSqcsncZjwF5ZJR6McrzVE4f"
     private const val NASA_API_URL = "https://api.nasa.gov/planetary/apod"
@@ -50,7 +51,7 @@ object ApodDesktop {
             }
 
             val responseString = connection.inputStream.bufferedReader().use { it.readText() }
-            
+
             // Iterate backwards to get the most recent image
             val imageUrl = ApodEntry.fromJsonArray(responseString)
                 .lastOrNull { it.mediaType == "image" }
@@ -89,14 +90,14 @@ object ApodDesktop {
         val channelName = "Wallpaper Updates"
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-            val channel = NotificationChannel(
-                channelId,
-                channelName,
-                NotificationManager.IMPORTANCE_DEFAULT
-            ).apply {
-                description = "Notifications when the APOD wallpaper is successfully updated"
-            }
-            notificationManager.createNotificationChannel(channel)
+        val channel = NotificationChannel(
+            channelId,
+            channelName,
+            NotificationManager.IMPORTANCE_DEFAULT,
+        ).apply {
+            description = "Notifications when the APOD wallpaper is successfully updated"
+        }
+        notificationManager.createNotificationChannel(channel)
 
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -106,7 +107,7 @@ object ApodDesktop {
             context,
             0,
             intent,
-            PendingIntent.FLAG_IMMUTABLE
+            PendingIntent.FLAG_IMMUTABLE,
         )
 
         val builder = NotificationCompat.Builder(context, channelId)
@@ -127,7 +128,7 @@ object ApodDesktop {
     private data class ApodEntry(
         val mediaType: String,
         val url: String,
-        val hdUrl: String?
+        val hdUrl: String?,
     ) {
         companion object {
             fun fromJsonArray(jsonString: String): List<ApodEntry> {
@@ -140,7 +141,7 @@ object ApodDesktop {
             fun fromJson(json: JSONObject): ApodEntry = ApodEntry(
                 mediaType = json.optString("media_type"),
                 url = json.optString("url"),
-                hdUrl = json.optString("hdurl").takeIf { it.isNotEmpty() }
+                hdUrl = json.optString("hdurl").takeIf { it.isNotEmpty() },
             )
         }
     }

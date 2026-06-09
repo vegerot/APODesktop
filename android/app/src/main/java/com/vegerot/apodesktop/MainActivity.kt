@@ -44,7 +44,7 @@ import java.util.concurrent.TimeUnit
 
 class MainActivity : ComponentActivity() {
     private val requestNotificationPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
+        ActivityResultContracts.RequestPermission(),
     ) { isGranted ->
         if (isGranted) {
             Toast.makeText(this, "Notification permission granted", Toast.LENGTH_SHORT).show()
@@ -57,7 +57,7 @@ class MainActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(
                     this,
-                    Manifest.permission.POST_NOTIFICATIONS
+                    Manifest.permission.POST_NOTIFICATIONS,
                 ) != PackageManager.PERMISSION_GRANTED
             ) {
                 requestNotificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -72,12 +72,12 @@ class MainActivity : ComponentActivity() {
             APODesktopTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
+                    color = MaterialTheme.colorScheme.background,
                 ) {
                     ApodScreen(
                         onRequestNotificationPermission = {
                             checkAndRequestNotificationPermission()
-                        }
+                        },
                     )
                 }
             }
@@ -108,7 +108,7 @@ fun ApodScreen(onRequestNotificationPermission: () -> Unit) {
                 workManager.enqueueUniquePeriodicWork(
                     "DailyApodWorker",
                     ExistingPeriodicWorkPolicy.UPDATE,
-                    workRequest
+                    workRequest,
                 )
                 Toast.makeText(context, "Daily updates enabled", Toast.LENGTH_SHORT).show()
             } else {
@@ -127,7 +127,7 @@ fun ApodScreen(onRequestNotificationPermission: () -> Unit) {
                     Toast.makeText(context, "Failed to update wallpaper", Toast.LENGTH_SHORT).show()
                 }
             }
-        }
+        },
     )
 }
 
@@ -136,29 +136,29 @@ internal fun ApodScreen(
     isDailyEnabled: Boolean,
     onDailyEnabledChange: (Boolean) -> Unit,
     onUpdateNowClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier
             .fillMaxSize()
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
     ) {
         Text(
             text = "APODesktop",
-            style = MaterialTheme.typography.headlineMedium
+            style = MaterialTheme.typography.headlineMedium,
         )
         Spacer(modifier = Modifier.height(32.dp))
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(text = "Enable Daily Wallpaper")
             Switch(
                 checked = isDailyEnabled,
-                onCheckedChange = onDailyEnabledChange
+                onCheckedChange = onDailyEnabledChange,
             )
         }
 
@@ -177,7 +177,7 @@ fun ApodScreenPreview() {
         ApodScreen(
             isDailyEnabled = false,
             onDailyEnabledChange = {},
-            onUpdateNowClick = {}
+            onUpdateNowClick = {},
         )
     }
 }

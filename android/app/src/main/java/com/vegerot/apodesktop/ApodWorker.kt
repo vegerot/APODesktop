@@ -6,7 +6,7 @@ import androidx.work.WorkerParameters
 
 class ApodWorker(
     appContext: Context,
-    workerParams: WorkerParameters
+    workerParams: WorkerParameters,
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
