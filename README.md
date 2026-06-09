@@ -93,6 +93,22 @@ $ make uninstall
 3. Right-click "APOD-Update Wallpaper daily"
 4. Click "delete"
 
+## Android
+
+1. Build and install the app on your Android device or emulator:
+
+```sh
+$ make android-install
+```
+
+Alternatively, open the `android/` folder in Android Studio, build, and run the app.
+
+2. Launch the APODesktop application on your device and turn on the "Enable Daily Wallpaper" switch to schedule the daily APOD wallpaper worker.
+
+### Uninstallation
+
+1. Uninstall the APODesktop app from your device.
+
 ## TODO
 
 - detect when the user plugs in a new monitor and update the wallpaper
