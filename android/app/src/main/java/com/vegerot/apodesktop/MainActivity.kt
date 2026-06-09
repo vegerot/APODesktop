@@ -43,6 +43,28 @@ import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 
 class MainActivity : ComponentActivity() {
+    private val requestNotificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            Toast.makeText(this, "Notification permission granted", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(this, "Notification permission denied. Wallpaper update notifications will be blocked.", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun checkAndRequestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                requestNotificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -52,7 +74,11 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    ApodScreen()
+                    ApodScreen(
+                        onRequestNotificationPermission = {
+                            checkAndRequestNotificationPermission()
+                        }
+                    )
                 }
             }
         }
@@ -60,7 +86,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun ApodScreen() {
+fun ApodScreen(onRequestNotificationPermission: () -> Unit) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     // For V1, we just default the switch to false, in a real app we'd read from SharedPreferences
