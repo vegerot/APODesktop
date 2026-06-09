@@ -7,6 +7,8 @@ import android.app.WallpaperManager
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import androidx.core.app.NotificationCompat
 import androidx.core.content.FileProvider
 import kotlinx.coroutines.Dispatchers
@@ -97,8 +99,23 @@ object ApodDesktop {
 
             if (yesterdayConnection.responseCode in 200..299) {
                 Log.d(TAG, "Setting lockscreen wallpaper...")
-                wallpaperManager.setStream(yesterdayConnection.inputStream, null, true, WallpaperManager.FLAG_LOCK)
-                success = true
+                val lockBitmap = BitmapFactory.decodeStream(yesterdayConnection.inputStream)
+                if (lockBitmap != null) {
+                    val displayMetrics = context.resources.displayMetrics
+                    val screenWidth = displayMetrics.widthPixels
+                    val screenHeight = displayMetrics.heightPixels
+
+                    val croppedBitmap = centerCropBitmap(lockBitmap, screenWidth, screenHeight)
+
+                    wallpaperManager.setBitmap(croppedBitmap, null, true, WallpaperManager.FLAG_LOCK)
+
+                    if (croppedBitmap != lockBitmap) croppedBitmap.recycle()
+                    lockBitmap.recycle()
+
+                    success = true
+                } else {
+                    Log.e(TAG, "Failed to decode yesterday's image")
+                }
             } else {
                 Log.e(TAG, "Yesterday's image download failed with response code: ${yesterdayConnection.responseCode}")
             }
@@ -192,6 +209,24 @@ object ApodDesktop {
             Log.e(TAG, "Error sharing APOD image", e)
             return false
         }
+    }
+
+    private fun centerCropBitmap(source: Bitmap, desiredWidth: Int, desiredHeight: Int): Bitmap {
+        val scale = maxOf(desiredWidth.toFloat() / source.width, desiredHeight.toFloat() / source.height)
+        val scaledWidth = (scale * source.width).toInt()
+        val scaledHeight = (scale * source.height).toInt()
+
+        val scaledBitmap = Bitmap.createScaledBitmap(source, scaledWidth, scaledHeight, true)
+        val x = maxOf(0, (scaledWidth - desiredWidth) / 2)
+        val y = maxOf(0, (scaledHeight - desiredHeight) / 2)
+
+        val croppedBitmap = Bitmap.createBitmap(scaledBitmap, x, y, minOf(desiredWidth, scaledWidth), minOf(desiredHeight, scaledHeight))
+
+        if (scaledBitmap != source && scaledBitmap != croppedBitmap) {
+            scaledBitmap.recycle()
+        }
+
+        return croppedBitmap
     }
 }
 
