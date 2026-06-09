@@ -94,7 +94,6 @@ spotless {
             mapOf(
                 "ktlint_function_naming_ignore_when_annotated_with" to "Composable",
                 "ktlint_standard_function-signature" to "disabled",
-                "ktlint_standard_filename" to "disabled",
             ),
         )
     }

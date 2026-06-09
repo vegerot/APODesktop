@@ -5,10 +5,12 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import com.vegerot.apodesktop.ui.main.MainScreen
+import kotlinx.serialization.Serializable
 
 @Composable
 fun MainNavigation() {
@@ -25,3 +27,8 @@ fun MainNavigation() {
         },
     )
 }
+
+sealed interface Destination : NavKey
+
+@Serializable
+data object Main : Destination
