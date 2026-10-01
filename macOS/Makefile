@@ -1,6 +1,6 @@
 build/apodesktop: APODesktop/APOD.swift APODesktop/concurrentSequence.swift
 	mkdir -p build
-	swiftc -g -Onone APODesktop/* -o build/apodesktop
+	swiftc -swift-version 6 -g -Onone APODesktop/* -o build/apodesktop
 
 # NOTE: if you change this, you may also need to update `PATH` in
 # `launchCtlSchedule.plist`
