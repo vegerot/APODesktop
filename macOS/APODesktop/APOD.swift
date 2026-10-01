@@ -22,11 +22,10 @@ func Main() async throws -> Result<Bool, ApodError> {
     throw ApodError.expectationFailed(message: "No screens found")
   }
 
-  /// shit happens (sometimes it's a video)
-  let daysToLookBack = screens.count + 2
-  let dateNDaysAgo: Date = .init(timeIntervalSinceNow: .init(-1 * daysToLookBack * 60 * 60 * 24))
-  print("Looking back \(daysToLookBack) days from \(dateNDaysAgo)")
-  let remoteImageURLs = try await getApodImageURLs(from: dateNDaysAgo)
+  // Request two spare entries because some APOD entries are videos.
+  let entryCount = screens.count + 2
+  print("Fetching \(entryCount) recent APOD entries")
+  let remoteImageURLs = try await getApodImageURLs(count: entryCount)
   print("Found \(remoteImageURLs.count) images to download")
   if remoteImageURLs.count == 0 {
     throw ApodError.expectationFailed(message: "No images found")
@@ -36,7 +35,6 @@ func Main() async throws -> Result<Bool, ApodError> {
   let localImageURLs =
     try await remoteImageURLs
     .concurrentCompactMap({ url in try await downloadImage(from: url) })
-    .reversed()
 
   print("Downloaded \(localImageURLs.count) images")
   if localImageURLs.count == 0 {
@@ -52,7 +50,7 @@ func Main() async throws -> Result<Bool, ApodError> {
         .imageScaling: NSNumber(value: NSImageScaling.scaleProportionallyUpOrDown.rawValue),
       ])
   }
-  print("Set \(screens.count) desktop images")
+  print("Set \(min(localImageURLs.count, screens.count)) desktop images")
   return .success(true)
 }
 
@@ -77,32 +75,17 @@ func downloadImage(from url: URL) async throws -> URL? {
   }
 }
 
-func getApodImageURLs(from date: Date) async throws -> [URL] {
-  let dateFormatter: DateFormatter = .init()
-  dateFormatter.locale = Locale(identifier: "en_US_POSIX")
-  dateFormatter.dateFormat = "yyyy-MM-dd"
-
-  let apodDate = dateFormatter.string(from: date)
-
-  let apodUrlPath = "https://api.nasa.gov/planetary/apod"
-  // TODO: remove secret
-  let apiKey = "JvhDwQU1Uhv7yfaQTSqcsncZjwF5ZJR6McrzVE4f"
-
-  guard
-    let apodURL = URL(
-      string:
-        "\(apodUrlPath)?api_key=\(apiKey)&start_date=\(apodDate)"
-    )
-  else {
-    throw ApodError.badApiURL
-  }
+func getApodImageURLs(count: Int) async throws -> [URL] {
+  let apodUrlPath = "https://science.nasa.gov/wp-json/wp/v2/apod-basic"
+  // The fixed HTTPS URL and integer count always form a valid URL.
+  let apodURL = URL(string: "\(apodUrlPath)?per_page=\(count)")!
 
   let (apodData, response) = try await URLSession.shared.data(from: apodURL)
   if let httpResponse = response as? HTTPURLResponse {
     if httpResponse.statusCode >= 300 {
       throw ApodError.apiGetFailed(
         message:
-          "bad status code while fetching list of imagess from NASA: \(httpResponse.statusCode)"
+          "bad status code while fetching list of images from NASA: \(httpResponse.statusCode)"
       )
     }
   } else {
@@ -111,14 +94,14 @@ func getApodImageURLs(from date: Date) async throws -> [URL] {
 
   let decoder = JSONDecoder()
   let apodItems = try decoder.decode([ApodEntry].self, from: apodData)
-    .filter({ $0.media_type == .image })
-    .compactMap({ apod in apod.hdurl ?? apod.url })
+    .sorted(by: { $0.date > $1.date })
+    .filter({ $0.media_type == "image" })
+    .compactMap({ apod in apod.hdurl })
 
   return apodItems
 }
 
 enum ApodError: Error {
-  case badApiURL
   case badImageURL
   case apiGetFailed(message: String)
   case expectationFailed(message: String)
@@ -127,7 +110,6 @@ enum ApodError: Error {
 extension ApodError: CustomStringConvertible {
   var description: String {
     switch self {
-    case .badApiURL: return "API URL is bad"
     case .badImageURL: return "Image URL is bad"
     case .apiGetFailed(let message): return message
     case .expectationFailed(let message): return message
@@ -135,16 +117,8 @@ extension ApodError: CustomStringConvertible {
   }
 }
 
-struct ApodEntry: Codable {
+struct ApodEntry: Decodable {
+  let date: String
   let hdurl: URL?
-  let url: URL?
-  let media_type: ApodMediaType?
-
-  enum ApodMediaType: String, Codable {
-    case image
-    case video
-    case other
-    // it would be nice to have an `unknown` default option.
-    // Now the program will crash if an unexpectd media_type is returned
-  }
+  let media_type: String?
 }

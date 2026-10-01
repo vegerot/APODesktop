@@ -16,6 +16,12 @@ Now your wallpaper will be automatically updated every morning at 10:00AM!
 
 You can also manually update your wallpaper at any time by running `apodesktop`
 
+The macOS program uses [NASA's APOD API](https://science.nasa.gov/wp-json/wp/v2/apod-basic)
+without an API key. It requests one recent entry per connected screen plus two
+spare entries, skips non-images and entries without an image URL, and assigns
+successfully downloaded images newest first. Screens without an available image
+keep their current wallpaper.
+
 <details>
     <summary>You can also build APODesktop with Xcode at your peril</summary>
 
