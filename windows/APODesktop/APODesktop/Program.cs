@@ -1,323 +1,122 @@
-using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
 
-using MonitorID = System.String;
-
-return main();
-int main()
+IDesktopWallpaper desktop = (IDesktopWallpaper)(object)new DesktopWallpaperClass();
+desktop.GetMonitorDevicePathCount(out uint monitorCount);
+if (monitorCount == 0)
 {
-    List<MonitorID> monitors = getScreens();
-    Console.WriteLine($"Detected {monitors.Count} monitors");
-
-    int number_of_monitors = monitors.Count;
-
-    /// shit happens (sometimes it's a video)
-    int number_of_days_to_look_back = number_of_monitors + 2;
-    DateOnly date_n_days_ago = DateOnly.FromDateTime(DateTime.Now.AddDays(-1 * number_of_days_to_look_back));
-    Console.WriteLine($"Looking back {number_of_days_to_look_back} days from {date_n_days_ago}");
-    List<URL> apodImageURLs = getApodImageURLs(date_n_days_ago);
-    Console.WriteLine($"Found {apodImageURLs.Count} images to download");
-    List<FilePath> pathsToImages = downloadImagesAtUrls(apodImageURLs.Take(number_of_monitors).ToList());
-    Console.WriteLine($"Downloaded {pathsToImages.Count} images");
-
-    SetTheseWallpapersToTheseImages(monitors, pathsToImages);
-    Console.WriteLine($"Set wallpaper for {monitors.Count} monitors");
-
-    return 0;
+    throw new InvalidOperationException("No monitors found.");
 }
 
-List<MonitorID> getScreens()
+List<string> monitors = [];
+for (uint i = 0; i < monitorCount; ++i)
 {
-    IDesktopWallpaper pDesktopWallpaper = (IDesktopWallpaper)(new DesktopWallpaperClass());
-    uint monitor_count = 0;
-    pDesktopWallpaper.GetMonitorDevicePathCount(ref monitor_count);
-    Debug.Assert(monitor_count > 0);
+    desktop.GetMonitorDevicePathAt(i, out string monitor);
+    monitors.Add(monitor);
+}
+Console.WriteLine($"Detected {monitors.Count} monitors");
 
-    List<MonitorID> screens = [];
-    for (uint i = 0; i < monitor_count; ++i)
-    {
-        MonitorID? monitor = null;
-        Debug.Assert(pDesktopWallpaper.GetMonitorDevicePathAt(i, ref monitor) == HRESULT.S_OK);
-        Debug.Assert(monitor != null);
-        screens.Add(monitor!);
-    }
-    return screens;
+// Request two spare entries because some APOD entries are videos.
+int entryCount = monitors.Count + 2;
+Console.WriteLine($"Fetching {entryCount} recent APOD entries");
+using HttpClient httpClient = new();
+List<ApodEntry> entries = await httpClient.GetFromJsonAsync(
+    $"https://science.nasa.gov/wp-json/wp/v2/apod-basic?per_page={entryCount}",
+    ApodApiJsonContext.Default.ListApodEntry)
+    ?? throw new InvalidOperationException("APOD API returned no data.");
 
+List<string> urls = entries
+    .OrderByDescending(entry => entry.Date, StringComparer.Ordinal)
+    .Where(entry => entry is { MediaType: "image", HdUrl: not null })
+    .Select(entry => entry.HdUrl!)
+    .ToList();
+Console.WriteLine($"Found {urls.Count} images to download");
+if (urls.Count == 0)
+{
+    throw new InvalidOperationException("No images found.");
 }
 
-List<URL> getApodImageURLs(DateOnly since)
+string tempDirectory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+Directory.CreateDirectory(tempDirectory);
+List<string> images = [];
+foreach (string url in urls)
 {
-    string formattedDate = since.ToString("yyyy-MM-dd");
-    Uri nasa_api_url = new($"https://api.nasa.gov/planetary/apod?api_key=JvhDwQU1Uhv7yfaQTSqcsncZjwF5ZJR6McrzVE4f&start_date={formattedDate}");
-
-    using HttpClient httpClient = new()
+    try
     {
-        BaseAddress = nasa_api_url,
-    };
-
-    List<ApodGetPicsResponse> apod_response = httpClient.GetFromJsonAsync("", ApodApiJsonContext.Default.ListApodGetPicsResponse).Result ?? throw new InvalidOperationException("APOD API returned no data.");
-
-    List<URL> urls = [];
-
-    foreach (var apod in apod_response)
-    {
-        if (apod is not { MediaType: "image" })
+        Console.WriteLine($"Downloading {url}...");
+        using HttpResponseMessage response = await httpClient.GetAsync(url);
+        response.EnsureSuccessStatusCode();
+        string? mediaType = response.Content.Headers.ContentType?.MediaType;
+        if (mediaType?.StartsWith("image/", StringComparison.OrdinalIgnoreCase) != true)
         {
+            Console.WriteLine($"Skipping non-image from {url} (MIME type: {mediaType ?? "unknown"})");
             continue;
         }
-        String image_url = apod.HdUrl ?? apod.Url;
 
-        urls.Add(new URL(image_url));
+        string imagePath = Path.Combine(tempDirectory, $"{images.Count}.jpeg");
+        byte[] imageBytes = await response.Content.ReadAsByteArrayAsync();
+        Console.WriteLine($"Downloaded {imageBytes.Length} bytes ({mediaType})");
+        await File.WriteAllBytesAsync(imagePath, imageBytes);
+        images.Add(imagePath);
+        if (images.Count == monitors.Count)
+        {
+            break;
+        }
     }
-
-    // reverse the list so that the most recent image is first
-    urls.Reverse();
-
-    return urls;
-}
-
-List<FilePath> downloadImagesAtUrls(List<URL> urls)
-{
-    List<FilePath> images = [];
-    var tempDirectory = GetTemporaryDirectory();
-    using HttpClient httpClient = new();
-    for (int i = 0; i < urls.Count; ++i)
+    catch (HttpRequestException error)
     {
-        URL url = urls[i];
-        String downloadedImageName = $"{i}.jpeg";
-        FilePath pathToDownloadedImage = new(tempDirectory + "\\" + downloadedImageName);
-        Console.WriteLine($"Downloading {url}...");
-        byte[] imageBytes = httpClient.GetByteArrayAsync(url.ToString()).Result;
-        File.WriteAllBytes(pathToDownloadedImage.ToString(), imageBytes);
-        images.Add(pathToDownloadedImage);
+        Console.WriteLine($"Failed to download from {url}: {error.Message}");
     }
-    return images;
-}
-
-string GetTemporaryDirectory()
-{
-    string tempDirectory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-    Directory.CreateDirectory(tempDirectory);
-    return tempDirectory;
-}
-
-void SetTheseWallpapersToTheseImages(List<MonitorID> monitors, List<FilePath> pathsToWallpapers)
-{
-    IDesktopWallpaper pDesktopWallpaper = (IDesktopWallpaper)(new DesktopWallpaperClass());
-    foreach (var (monitor, image) in monitors.Zip(pathsToWallpapers))
+    catch (TaskCanceledException error)
     {
-        Console.WriteLine($"Setting wallpaper for {monitor} to {image}");
-        Debug.Assert(pDesktopWallpaper.SetWallpaper(monitor, image.ToString()) == HRESULT.S_OK);
+        Console.WriteLine($"Failed to download from {url}: {error.Message}");
     }
-
+}
+Console.WriteLine($"Downloaded {images.Count} images");
+if (images.Count == 0)
+{
+    throw new InvalidOperationException("No valid images found.");
 }
 
-readonly record struct FilePath(string Value)
+foreach (var (monitor, image) in monitors.Zip(images))
 {
-    override public String ToString() => this.Value;
+    Console.WriteLine($"Setting wallpaper for {monitor} to {image}");
+    desktop.SetWallpaper(monitor, image);
 }
+Console.WriteLine($"Set wallpaper for {images.Count} monitors");
 
-readonly record struct URL(string Value)
+internal sealed record class ApodEntry
 {
-    override public String ToString() => this.Value;
-}
+    [JsonPropertyName("date")]
+    public required string Date { get; init; }
 
-public sealed record class ApodGetPicsResponse
-{
     [JsonPropertyName("media_type")]
-    public required string MediaType { get; init; }
-
-    [JsonPropertyName("url")]
-    public required string Url { get; init; }
+    public string? MediaType { get; init; }
 
     [JsonPropertyName("hdurl")]
     public string? HdUrl { get; init; }
 }
 
-[JsonSourceGenerationOptions(PropertyNameCaseInsensitive = true)]
-[JsonSerializable(typeof(List<ApodGetPicsResponse>))]
-internal partial class ApodApiJsonContext : JsonSerializerContext
+[JsonSerializable(typeof(List<ApodEntry>))]
+internal sealed partial class ApodApiJsonContext : JsonSerializerContext
 {
 }
 
-/**IGNORE EVERYTHING PAST HERE */
-
-
-[StructLayout(LayoutKind.Sequential)]
-public struct RECT
-{
-    public int left;
-    public int top;
-    public int right;
-    public int bottom;
-
-    public RECT(int left, int top, int right, int bottom)
-    {
-        this.left = left;
-        this.top = top;
-        this.right = right;
-        this.bottom = bottom;
-    }
-}
-
+// Only the first four COM methods are needed. Keep their native vtable order.
+// Without PreserveSig, .NET converts a failed HRESULT into a COM exception.
 [ComImport]
 [Guid("B92B56A9-8B55-4E14-9A89-0199BBB6F93B")]
 [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-interface IDesktopWallpaper
+internal interface IDesktopWallpaper
 {
-    HRESULT SetWallpaper([MarshalAs(UnmanagedType.LPWStr)] string monitorID, [MarshalAs(UnmanagedType.LPWStr)] string wallpaper);
-    HRESULT GetWallpaper(int monitorID, [MarshalAs(UnmanagedType.LPWStr)] ref string wallpaper);
-    HRESULT GetMonitorDevicePathAt(uint monitorIndex, [MarshalAs(UnmanagedType.LPWStr)] ref string monitorID);
-    HRESULT GetMonitorDevicePathCount(ref uint count);
-    HRESULT GetMonitorRECT([MarshalAs(UnmanagedType.LPWStr)] string monitorID, [MarshalAs(UnmanagedType.Struct)] ref RECT displayRect);
-    HRESULT SetBackgroundColor(uint color);
-    HRESULT GetBackgroundColor(ref uint color);
-    HRESULT SetPosition(DESKTOP_WALLPAPER_POSITION position);
-    HRESULT GetPosition(ref DESKTOP_WALLPAPER_POSITION position);
-    HRESULT SetSlideshow(IShellItemArray items);
-    HRESULT GetSlideshow(ref IShellItemArray items);
-    HRESULT SetSlideshowOptions(DESKTOP_SLIDESHOW_OPTIONS options, uint slideshowTick);
-    [PreserveSig]
-    HRESULT GetSlideshowOptions(out DESKTOP_SLIDESHOW_OPTIONS options, out uint slideshowTick);
-    HRESULT AdvanceSlideshow([MarshalAs(UnmanagedType.LPWStr)] string monitorID, DESKTOP_SLIDESHOW_DIRECTION direction);
-    HRESULT GetStatus(ref DESKTOP_SLIDESHOW_STATE state);
-    HRESULT Enable(bool benable);
+    void SetWallpaper([MarshalAs(UnmanagedType.LPWStr)] string monitorID, [MarshalAs(UnmanagedType.LPWStr)] string wallpaper);
+    void GetWallpaper([MarshalAs(UnmanagedType.LPWStr)] string monitorID, [MarshalAs(UnmanagedType.LPWStr)] out string wallpaper);
+    void GetMonitorDevicePathAt(uint monitorIndex, [MarshalAs(UnmanagedType.LPWStr)] out string monitorID);
+    void GetMonitorDevicePathCount(out uint count);
 }
-
-public enum DESKTOP_WALLPAPER_POSITION
-{
-    DWPOS_CENTER = 0,
-    DWPOS_TILE = 1,
-    DWPOS_STRETCH = 2,
-    DWPOS_FIT = 3,
-    DWPOS_FILL = 4,
-    DWPOS_SPAN = 5
-}
-
-public enum DESKTOP_SLIDESHOW_OPTIONS
-{
-    DSO_SHUFFLEIMAGES = 0x1
-}
-
-public enum DESKTOP_SLIDESHOW_STATE
-{
-    DSS_ENABLED = 0x1,
-    DSS_SLIDESHOW = 0x2,
-    DSS_DISABLED_BY_REMOTE_SESSION = 0x4
-}
-
-public enum DESKTOP_SLIDESHOW_DIRECTION
-{
-    DSD_FORWARD = 0,
-    DSD_BACKWARD = 1
-}
-
 
 [ComImport, Guid("C2CF3110-460E-4fc1-B9D0-8A1C0C9CC4BD")]
-public class DesktopWallpaperClass
+internal sealed class DesktopWallpaperClass
 {
-}
-
-public enum HRESULT : int
-{
-    S_OK = 0,
-    S_FALSE = 1,
-    E_NOINTERFACE = unchecked((int)0x80004002),
-    E_NOTIMPL = unchecked((int)0x80004001),
-    E_FAIL = unchecked((int)0x80004005)
-}
-
-
-public enum SIATTRIBFLAGS
-{
-    SIATTRIBFLAGS_AND = 0x1,
-    SIATTRIBFLAGS_OR = 0x2,
-    SIATTRIBFLAGS_APPCOMPAT = 0x3,
-    SIATTRIBFLAGS_MASK = 0x3,
-    SIATTRIBFLAGS_ALLITEMS = 0x4000
-}
-
-[ComImport()]
-[InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-[Guid("b63ea76d-1f85-456f-a19c-48159efa858b")]
-public interface IShellItemArray
-{
-    HRESULT BindToHandler(IntPtr pbc, ref Guid bhid, ref Guid riid, ref IntPtr ppvOut);
-    HRESULT GetPropertyStore(GETPROPERTYSTOREFLAGS flags, ref Guid riid, ref IntPtr ppv);
-    HRESULT GetPropertyDescriptionList(REFPROPERTYKEY keyType, ref Guid riid, ref IntPtr ppv);
-    HRESULT GetAttributes(SIATTRIBFLAGS AttribFlags, int sfgaoMask, ref int psfgaoAttribs);
-    HRESULT GetCount(ref int pdwNumItems);
-    HRESULT GetItemAt(int dwIndex, ref IShellItem ppsi);
-    HRESULT EnumItems(ref IntPtr ppenumShellItems);
-}
-
-[ComImport()]
-[InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-[Guid("43826D1E-E718-42EE-BC55-A1E261C37BFE")]
-public interface IShellItem
-{
-    [PreserveSig()]
-    HRESULT BindToHandler(IntPtr pbc, ref Guid bhid, ref Guid riid, ref IntPtr ppv);
-    HRESULT GetParent(ref IShellItem ppsi);
-    HRESULT GetDisplayName(SIGDN sigdnName, ref System.Text.StringBuilder ppszName);
-    HRESULT GetAttributes(uint sfgaoMask, ref uint psfgaoAttribs);
-    HRESULT Compare(IShellItem psi, uint hint, ref int piOrder);
-}
-public enum SIGDN : int
-{
-    SIGDN_NORMALDISPLAY = 0x0,
-    SIGDN_PARENTRELATIVEPARSING = unchecked((int)0x80018001),
-    SIGDN_DESKTOPABSOLUTEPARSING = unchecked((int)0x80028000),
-    SIGDN_PARENTRELATIVEEDITING = unchecked((int)0x80031001),
-    SIGDN_DESKTOPABSOLUTEEDITING = unchecked((int)0x8004C000),
-    SIGDN_FILESYSPATH = unchecked((int)0x80058000),
-    SIGDN_URL = unchecked((int)0x80068000),
-    SIGDN_PARENTRELATIVEFORADDRESSBAR = unchecked((int)0x8007C001),
-    SIGDN_PARENTRELATIVE = unchecked((int)0x80080001)
-}
-
-public enum GETPROPERTYSTOREFLAGS
-{
-    GPS_DEFAULT = 0,
-    GPS_HANDLERPROPERTIESONLY = 0x1,
-    GPS_READWRITE = 0x2,
-    GPS_TEMPORARY = 0x4,
-    GPS_FASTPROPERTIESONLY = 0x8,
-    GPS_OPENSLOWITEM = 0x10,
-    GPS_DELAYCREATION = 0x20,
-    GPS_BESTEFFORT = 0x40,
-    GPS_NO_OPLOCK = 0x80,
-    GPS_PREFERQUERYPROPERTIES = 0x100,
-    GPS_EXTRINSICPROPERTIES = 0x200,
-    GPS_EXTRINSICPROPERTIESONLY = 0x400,
-    GPS_MASK_VALID = 0x7FF
-}
-
-[StructLayout(LayoutKind.Sequential, Pack = 4)]
-public struct REFPROPERTYKEY
-{
-    private Guid fmtid;
-    private int pid;
-    public Guid FormatId
-    {
-        get
-        {
-            return this.fmtid;
-        }
-    }
-    public int PropertyId
-    {
-        get
-        {
-            return this.pid;
-        }
-    }
-    public REFPROPERTYKEY(Guid formatId, int propertyId)
-    {
-        this.fmtid = formatId;
-        this.pid = propertyId;
-    }
-    public static readonly REFPROPERTYKEY PKEY_DateCreated = new REFPROPERTYKEY(new Guid("B725F130-47EF-101A-A5F1-02608C9EEBAC"), 15);
 }

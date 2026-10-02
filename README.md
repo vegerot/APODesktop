@@ -81,16 +81,18 @@ $ make uninstall
 
 ## Windows
 
-1. Open Developer Powershell (Powershell with `msbuild`)
-2. run
+1. Install the .NET 10 SDK and open PowerShell in the repository.
+2. Run:
 
 ```pwsh
-> sl windows\APODesktop
-> msbuild .
-> .\scheduleApodDaily.ps1
+> .\windows\APODesktop\scheduleApodDaily.ps1
 ```
 
-3. Profit?
+The script builds a Release version in `%LOCALAPPDATA%\Programs\APODesktop`
+and registers a daily wallpaper update at noon. Run the installed
+`APODesktop.exe` to update immediately. Like macOS, Windows uses NASA's
+keyless APOD API, assigns images newest first, and skips failed downloads
+and non-images.
 
 ### Uninstallation
 

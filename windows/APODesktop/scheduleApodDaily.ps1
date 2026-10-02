@@ -1,4 +1,10 @@
-$apod =  Convert-Path .\APODesktop\bin\Debug\net10.0-windows\APODesktop.exe
+$ErrorActionPreference = 'Stop'
+$installDirectory = Join-Path $env:LOCALAPPDATA 'Programs\APODesktop'
+dotnet publish "$PSScriptRoot\APODesktop\APODesktop.csproj" --configuration Release --output $installDirectory
+if ($LASTEXITCODE -ne 0) {
+    throw 'APODesktop publish failed.'
+}
+$apod = Join-Path $installDirectory 'APODesktop.exe'
 $action = New-ScheduledTaskAction -Execute $apod
 $trigger = New-ScheduledTaskTrigger -Daily -At '12:00 PM'
 $principal = New-ScheduledTaskPrincipal -UserId (whoami)
@@ -7,8 +13,4 @@ $task = New-ScheduledTask -Action $action -Principal $principal -Trigger $trigge
 $name = 'APOD-Update Wallpaper daily'
 $description = 'from https://github.com/vegerot/APODesktop'
 
-if (Get-ScheduledTask -TaskName $name -ErrorAction SilentlyContinue) {
-    Unregister-ScheduledTask -TaskName $name -Confirm:$false
-}
-
-Register-ScheduledTask $name -InputObject $task
+Register-ScheduledTask $name -InputObject $task -Force
