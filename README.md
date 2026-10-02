@@ -113,6 +113,11 @@ Alternatively, open the `android/` folder in Android Studio, build, and run the 
 
 2. Launch the APODesktop application on your device and turn on the "Enable Daily Wallpaper" switch to schedule the daily APOD wallpaper worker.
 
+Android uses the same keyless NASA API. It requests six recent entries, skips
+videos and entries without an image URL, and uses the newest image for the home
+screen and the preceding image for the lock screen. The preview displays the
+newest image and converts NASA's HTML explanation to readable text.
+
 ### Uninstallation
 
 1. Uninstall the APODesktop app from your device.

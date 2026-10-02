@@ -16,45 +16,32 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
-import java.io.InputStream
-import java.net.HttpURLConnection
-import java.net.URL
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Locale
-import java.util.TimeZone
 
 object ApodDesktop {
     private const val TAG = "ApodDesktop"
 
-    /** TODO: remove secret */
-    private const val API_KEY = "JvhDwQU1Uhv7yfaQTSqcsncZjwF5ZJR6McrzVE4f"
-    private const val NASA_API_URL = "https://api.nasa.gov/planetary/apod"
+    private const val NASA_API_URL = "https://science.nasa.gov/wp-json/wp/v2/apod-basic"
 
     suspend fun fetchRecentImageApods(): List<ApodEntry> = withContext(Dispatchers.IO) {
         try {
             executeWithRetry(times = 3) {
-                val daysToLookBack = 5
-                val calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
-                calendar.add(Calendar.DAY_OF_YEAR, -daysToLookBack)
-
-                val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-                dateFormat.timeZone = TimeZone.getTimeZone("UTC")
-                val startDate = dateFormat.format(calendar.time)
-
-                val apiUrl = "$NASA_API_URL?api_key=$API_KEY&start_date=$startDate"
+                // Fetch six recent entries to allow for videos.
+                val apiUrl = "$NASA_API_URL?per_page=6"
                 Log.d(TAG, "Fetching APOD from: $apiUrl")
 
                 val connection = setupConnection(apiUrl, 5000)
                 connection.requestMethod = "GET"
 
-                if (connection.responseCode !in 200..299) {
-                    throw Exception("API request failed with response code: ${connection.responseCode}")
-                }
+                try {
+                    if (connection.responseCode !in 200..299) {
+                        throw Exception("API request failed with response code: ${connection.responseCode}")
+                    }
 
-                val responseString = connection.inputStream.bufferedReader().use { it.readText() }
-                val entries = ApodEntry.fromJsonArray(responseString)
-                entries.filter { it.mediaType == "image" }
+                    val responseString = connection.inputStream.bufferedReader().use { it.readText() }
+                    ApodEntry.fromJsonArray(responseString)
+                } finally {
+                    connection.disconnect()
+                }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error fetching APOD", e)
@@ -256,6 +243,10 @@ data class ApodEntry(
             return (0 until jsonArray.length()).map { i ->
                 fromJson(jsonArray.getJSONObject(i))
             }
+                // The new API's url is an article, not an image. Only hdurl is downloadable.
+                .filter { it.mediaType == "image" && it.hdUrl != null }
+                // Callers select the last entry for today, then the preceding entry for lockscreen.
+                .sortedBy { it.date }
         }
 
         fun fromJson(json: JSONObject): ApodEntry = ApodEntry(
@@ -264,7 +255,7 @@ data class ApodEntry(
             date = json.optString("date"),
             mediaType = json.optString("media_type"),
             url = json.optString("url"),
-            hdUrl = json.optString("hdurl").takeIf { it.isNotEmpty() },
+            hdUrl = json.optString("hdurl").takeUnless { json.isNull("hdurl") || it.isBlank() },
         )
     }
 }

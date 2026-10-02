@@ -54,6 +54,7 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import androidx.core.text.HtmlCompat
 import com.vegerot.apodesktop.ApodDesktop
 import com.vegerot.apodesktop.ApodEntry
 import com.vegerot.apodesktop.ApodWorker
@@ -228,7 +229,10 @@ internal fun ApodContent(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = entry.explanation,
+                text = HtmlCompat.fromHtml(
+                    entry.explanation,
+                    HtmlCompat.FROM_HTML_MODE_LEGACY,
+                ).toString().trim(),
                 style = MaterialTheme.typography.bodyLarge,
                 lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.25f,
                 color = MaterialTheme.colorScheme.onSurface,
