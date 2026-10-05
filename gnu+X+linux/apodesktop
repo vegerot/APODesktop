@@ -1,208 +1,118 @@
 #!/usr/bin/env python3
+"""Set each monitor's wallpaper to a recent NASA Astronomy Picture of the Day."""
 
+import itertools
+import json
 import os
+import re
 import subprocess
 import time
 import urllib.parse
 import urllib.request
-import json
-import re
+from pathlib import Path
 
-# work around ipv6 bug on Ubuntu 22.04
-# Note: urllib.request doesn't have a direct equivalent to requests' HAS_IPV6 toggle 
-# but it generally handles it gracefully or follows system preferences.
+from PIL import Image, ImageOps
 
-IMAGES_PATH = "/tmp/apodesktop"
-# GNOME saves the wallpaper URI and shows only its fallback color after reboot
-# if the URI points to a file in a cleared /tmp.
-WALLPAPERS_PATH = os.path.expanduser("~/.local/share/apodesktop")
+APOD_API = "https://science.nasa.gov/wp-json/wp/v2/apod-basic"
+DOWNLOADS_PATH = Path("/tmp/apodesktop")
+# GNOME stores the wallpaper URI. A file in /tmp would be gone after a reboot,
+# and GNOME would show only its fallback color.
+WALLPAPERS_PATH = Path.home() / ".local/share/apodesktop"
+# The systemd service has no start timeout, so a stalled request would hang it forever.
+TIMEOUT_SECONDS = 60
 
-def http_get_json(url):
-    with urllib.request.urlopen(url) as response:
-        assert response.status == 200, f"Failed to get JSON. Status code: {response.status}"
-        return json.loads(response.read().decode())
 
-def http_download(url, dest_path):
-    # Some URLs might need a user-agent if they block default python-urllib
-    req = urllib.request.Request(url)
-    with urllib.request.urlopen(req) as response:
-        assert response.status == 200, f"Failed to download image. Status code: {response.status}"
-        content_type = response.info().get('Content-Type', '')
-        assert "image" in content_type, f"Downloaded file is not an image ({content_type})"
-        with open(dest_path, 'wb') as f:
-            f.write(response.read())
-        return content_type
+def get_monitors():
+    """Return the geometry of each enabled monitor, primary monitor first."""
+    xrandr = subprocess.check_output(["xrandr", "--query"], text=True)
+    monitors = []
+    for line in xrandr.splitlines():
+        match = re.search(r" connected (primary )?(\d+)x(\d+)\+(\d+)\+(\d+)", line)
+        if match:
+            primary, w, h, x, y = match.groups()
+            monitor = {"w": int(w), "h": int(h), "x": int(x), "y": int(y)}
+            monitors.insert(0 if primary else len(monitors), monitor)
+    return monitors
 
-def getNumberOfMonitors():
-    desktop_session = os.environ.get("XDG_CURRENT_DESKTOP", "").lower()
-    
-    if "hyprland" in desktop_session:
-        output = subprocess.check_output(["hyprctl", "monitors", "-j"], text=True)
-        monitors_data = json.loads(output)
-        # Filter only active monitors
-        return [{"w": m["width"], "h": m["height"], "x": m["x"], "y": m["y"], "name": m["name"]} for m in monitors_data if not m.get("disabled", False)]
-    else:
-        monitors = []
-        xrandrOutput = subprocess.check_output(["xrandr", "--query"], text=True)
-        pattern = re.compile(r"(\d+)x(\d+)\+(\d+)\+(\d+)")
-        for line in xrandrOutput.splitlines():
-            if " connected" in line:
-                match = pattern.search(line)
-                if match:
-                    w, h, x, y = map(int, match.groups())
-                    monitors.append({"w": w, "h": h, "x": x, "y": y, "name": None})
-        return monitors
 
-def getAPODImageURLs(entry_count):
-    assert entry_count > 0, "Entry count is not positive"
+def get_image_urls(count):
+    """Return image URLs of the `count` most recent APOD entries, newest first."""
+    url = f"{APOD_API}?per_page={count}"
+    with urllib.request.urlopen(url, timeout=TIMEOUT_SECONDS) as response:
+        entries = json.load(response)
+    # The API returns entries newest first. `url` is an article page, so use `hdurl`.
+    return [entry["hdurl"] for entry in entries if entry["media_type"] == "image"]
 
-    apodURL = f"https://science.nasa.gov/wp-json/wp/v2/apod-basic?per_page={entry_count}"
 
-    responseJSON = http_get_json(apodURL)
-    assert isinstance(responseJSON, list), "APOD response is not a list"
+def download(urls):
+    """Download each URL into DOWNLOADS_PATH (reusing earlier downloads) and return the paths."""
+    DOWNLOADS_PATH.mkdir(exist_ok=True)
+    paths = []
+    for url in urls:
+        name = urllib.parse.unquote(Path(urllib.parse.urlparse(url).path).name)
+        path = DOWNLOADS_PATH / name
+        if not path.exists():
+            try:
+                with urllib.request.urlopen(url, timeout=TIMEOUT_SECONDS) as response:
+                    path.write_bytes(response.read())
+            except OSError as error:
+                # Happens in practice: the old APOD host returned 403 and 404 for some images.
+                print(f"Skipping {url}: {error}")
+                continue
+        paths.append(path)
+    return paths
 
-    # The new API's `url` is an article page, not an image. Only `hdurl` is downloadable.
-    entries = sorted(responseJSON, key=lambda entry: entry["date"], reverse=True)
-    apodImageURLs = [
-        entry["hdurl"]
-        for entry in entries
-        if entry.get("media_type") == "image" and entry.get("hdurl")
-    ]
-    assert len(apodImageURLs) > 0, "No APOD images found"
 
-    # most recent image first
-    return apodImageURLs
+def set_gnome_wallpaper(paths, monitors):
+    """GNOME shows one wallpaper across all monitors, so combine one image per monitor."""
+    width = max(m["x"] + m["w"] for m in monitors)
+    height = max(m["y"] + m["h"] for m in monitors)
+    canvas = Image.new("RGB", (width, height))
+    for monitor, path in zip(monitors, itertools.cycle(paths)):
+        with Image.open(path) as image:
+            fitted = ImageOps.fit(image, (monitor["w"], monitor["h"]), Image.Resampling.LANCZOS)
+        canvas.paste(fitted, (monitor["x"], monitor["y"]))
 
-def downloadImages(apodImageURLs):
-    assert len(apodImageURLs) > 0, "No APOD images to download"
-    
-    def downloadImage(apodImageURL, tempDir):
-        imageName = urllib.parse.unquote(
-            os.path.basename(urllib.parse.urlparse(apodImageURL).path)
-        )
-        dest = os.path.join(tempDir, imageName)
-        if os.path.exists(dest):
-            return dest
-        try:
-            print(f"Downloading {apodImageURL}...")
-            http_download(apodImageURL, dest)
-            return dest
-        except Exception as e:
-            print(f"Failed to download {apodImageURL}: {e}")
-            return None
+    # Use a new filename every run: setting picture-uri to its current value does
+    # nothing, so GNOME would keep showing its cached (or fallback) image.
+    WALLPAPERS_PATH.mkdir(parents=True, exist_ok=True)
+    wallpaper = WALLPAPERS_PATH / f"wallpaper_{time.time_ns()}.jpg"
+    canvas.save(wallpaper, quality=95)
 
-    tempDir = IMAGES_PATH
-    os.makedirs(tempDir, exist_ok=True)
-    pathsToImages = [
-        downloadImage(apodImageURL, tempDir) for apodImageURL in apodImageURLs
-    ]
-    # Filter out None values (failed downloads)
-    pathsToImages = [path for path in pathsToImages if path is not None]
-    
-    assert len(pathsToImages) > 0, "No images downloaded"
-    return pathsToImages
+    uri = wallpaper.as_uri()
+    for key, value in [
+        ("picture-options", "spanned"),
+        ("picture-uri", uri),
+        ("picture-uri-dark", uri),
+    ]:
+        subprocess.run(["gsettings", "set", "org.gnome.desktop.background", key, value], check=True)
 
-def createCombinedWallpaper(pathsToImages, monitors):
-    from PIL import Image
-    
-    # Calculate total canvas size
-    max_x = max(m["x"] + m["w"] for m in monitors)
-    max_y = max(m["y"] + m["h"] for m in monitors)
-    canvas = Image.new("RGB", (max_x, max_y))
+    # Delete old wallpapers only after GNOME points at the new one.
+    for old in WALLPAPERS_PATH.iterdir():
+        if old != wallpaper:
+            old.unlink()
 
-    for i, m in enumerate(monitors):
-        img_path = pathsToImages[i % len(pathsToImages)]
-        img = Image.open(img_path)
-        
-        # Simple zoom/fill logic for each monitor
-        img_ratio = img.width / img.height
-        mon_ratio = m["w"] / m["h"]
-        if img_ratio > mon_ratio:
-            new_h = m["h"]
-            new_w = int(new_h * img_ratio)
-        else:
-            new_w = m["w"]
-            new_h = int(new_w / img_ratio)
-
-        img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
-        # Crop to monitor size
-        left = (new_w - m["w"]) / 2
-        top = (new_h - m["h"]) / 2
-        img = img.crop((left, top, left + m["w"], top + m["h"]))
-        canvas.paste(img, (m["x"], m["y"]))
-
-    # Use a new filename every run: setting picture-uri to its current value is
-    # a no-op, so GNOME would keep showing its cached (or fallback) image.
-    os.makedirs(WALLPAPERS_PATH, exist_ok=True)
-    for old in os.listdir(WALLPAPERS_PATH):
-        os.remove(os.path.join(WALLPAPERS_PATH, old))
-    combined_path = os.path.join(WALLPAPERS_PATH, f"combined_wallpaper_{int(time.time())}.jpg")
-    canvas.save(combined_path, quality=95)
-    return combined_path
-
-def setWallpaper(pathsToImages, monitors):
-    assert len(pathsToImages) > 0, "No images to set as wallpaper"
-    
-    def setWallpaperHyprland(pathsToImages, monitors):
-        # Kill existing swaybg
-        subprocess.run(["pkill", "swaybg"])
-        
-        for i, m in enumerate(monitors):
-            img = pathsToImages[i % len(pathsToImages)]
-            print(f"Setting wallpaper for {m.get('name', 'monitor '+str(i))} to {img}")
-            # Running swaybg per monitor
-            if m.get("name"):
-                subprocess.Popen(["swaybg", "-o", m["name"], "-i", img, "-m", "fill"])
-            else:
-                subprocess.Popen(["swaybg", "-i", img, "-m", "fill"])
-
-    def setWallpaperGnome(pathsToImages, monitors):
-        print("Using GNOME-specific wallpaper setting")
-        # For GNOME, we try to use PIL if available to create a spanned wallpaper
-        try:
-            combined_path = createCombinedWallpaper(pathsToImages, monitors)
-            uri = f"file://{os.path.abspath(combined_path)}"
-            subprocess.run(["gsettings", "set", "org.gnome.desktop.background", "picture-options", "spanned"])
-            subprocess.run(["gsettings", "set", "org.gnome.desktop.background", "picture-uri", uri])
-            subprocess.run(["gsettings", "set", "org.gnome.desktop.background", "picture-uri-dark", uri])
-        except ImportError:
-            print("PIL not found, setting first image as wallpaper")
-            uri = f"file://{os.path.abspath(pathsToImages[0])}"
-            subprocess.run(["gsettings", "set", "org.gnome.desktop.background", "picture-options", "zoom"])
-            subprocess.run(["gsettings", "set", "org.gnome.desktop.background", "picture-uri", uri])
-            subprocess.run(["gsettings", "set", "org.gnome.desktop.background", "picture-uri-dark", uri])
-
-    desktop_session = os.environ.get("XDG_CURRENT_DESKTOP", "").lower()
-    gdm_session = os.environ.get("GDMSESSION", "").lower()
-    is_gnome = "gnome" in desktop_session and "i3" not in gdm_session
-
-    if "hyprland" in desktop_session:
-        setWallpaperHyprland(pathsToImages, monitors)
-    elif is_gnome:
-        setWallpaperGnome(pathsToImages, monitors)
-    else:
-        print("Using feh to set wallpaper")
-        assert "DISPLAY" in os.environ or "WAYLAND_DISPLAY" in os.environ, "No display found"
-        subprocess.run(["feh", "--bg-fill"] + pathsToImages)
 
 def main():
-    monitors = getNumberOfMonitors()
-    assert len(monitors) > 0, "No monitors detected"
-    print(f"Detected {len(monitors)} monitors")
+    monitors = get_monitors()
+    assert monitors, "No monitors found"
 
-    # request two spare entries because some APOD entries are videos
-    entry_count = len(monitors) + 2
-    print(f"Fetching {entry_count} recent APOD entries")
+    # Request two spare entries because some APOD entries are videos.
+    urls = get_image_urls(len(monitors) + 2)
+    paths = download(urls)
+    assert paths, "No images downloaded"
+    print(f"Downloaded {len(paths)} images for {len(monitors)} monitors")
 
-    apodImageURLs = getAPODImageURLs(entry_count)
-    print(f"Found {len(apodImageURLs)} images to download")
+    desktop = os.environ.get("XDG_CURRENT_DESKTOP", "").lower()
+    session = os.environ.get("GDMSESSION", "").lower()
+    # In the i3-gnome session, GNOME Shell doesn't draw the wallpaper.
+    if "gnome" in desktop and "i3" not in session:
+        set_gnome_wallpaper(paths, monitors)
+        print("Set wallpaper with gsettings")
+    else:
+        subprocess.run(["feh", "--bg-fill", *paths], check=True)
+        print("Set wallpaper with feh")
 
-    pathsToImages = downloadImages(apodImageURLs)
-    print(f"Downloaded {len(pathsToImages)} images")
-
-    setWallpaper(pathsToImages, monitors)
-    print(f"Set wallpaper for {len(monitors)} monitors")
-    return 0
 
 if __name__ == "__main__":
     main()

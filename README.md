@@ -68,6 +68,14 @@ $ make install
 
 2. Profit?
 
+A systemd user timer updates the wallpaper daily once your graphical session
+has started. Linux uses the same keyless NASA API, requests one recent entry per
+monitor plus two spares (some entries are videos), and gives the newest image to
+the primary monitor. On GNOME it combines one image per monitor into a single
+spanned wallpaper in `~/.local/share/apodesktop/`. In other X sessions (such as
+i3) it uses `feh`. It needs `python3`, Pillow, and `xrandr` (plus `feh` outside
+GNOME).
+
 ### Uninstallation
 
 1. simply run
