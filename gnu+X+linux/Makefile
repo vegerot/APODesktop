@@ -4,8 +4,9 @@ install: .install-stamp
 	install -v ./apodesktop $(PREFIX)/bin/apodesktop
 	mkdir -p ~/.config/systemd/user
 	install -v ./systemd/* ~/.config/systemd/user/
-	systemctl --user enable apodesktop.timer 
-	systemctl --user start apodesktop.timer
+	systemctl --user daemon-reload
+	systemctl --user reenable apodesktop.timer 
+	systemctl --user restart apodesktop.timer
 	touch .install-stamp
 	$(PREFIX)/bin/apodesktop
 
@@ -15,4 +16,5 @@ uninstall:
 	rm ~/.config/systemd/user/apodesktop.timer || true
 	systemctl --user stop apodesktop.timer || true
 	systemctl --user disable apodesktop.timer || true
+	systemctl --user daemon-reload || true
 	rm .install-stamp || true
