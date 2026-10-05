@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
-import datetime
 import os
 import subprocess
+import time
+import urllib.parse
 import urllib.request
 import json
 import re
@@ -12,6 +13,9 @@ import re
 # but it generally handles it gracefully or follows system preferences.
 
 IMAGES_PATH = "/tmp/apodesktop"
+# GNOME saves the wallpaper URI and shows only its fallback color after reboot
+# if the URI points to a file in a cleared /tmp.
+WALLPAPERS_PATH = os.path.expanduser("~/.local/share/apodesktop")
 
 def http_get_json(url):
     with urllib.request.urlopen(url) as response:
@@ -49,34 +53,33 @@ def getNumberOfMonitors():
                     monitors.append({"w": w, "h": h, "x": x, "y": y, "name": None})
         return monitors
 
-def getAPODImageURLs(date, number_of_days_to_look_back):
-    assert isinstance(date, datetime.datetime), "Date is not a datetime object"
-    assert number_of_days_to_look_back > 0, "Number of days to look back is not positive"
+def getAPODImageURLs(entry_count):
+    assert entry_count > 0, "Entry count is not positive"
 
-    dateToCheck = date - datetime.timedelta(days=number_of_days_to_look_back)
-    formattedDate = dateToCheck.strftime("%Y-%m-%d")
-    
-    # MUST FIX: Remove the API key from the code before sharing
-    apodURL = f"https://api.nasa.gov/planetary/apod?api_key=JvhDwQU1Uhv7yfaQTSqcsncZjwF5ZJR6McrzVE4f&start_date={formattedDate}"
-    
+    apodURL = f"https://science.nasa.gov/wp-json/wp/v2/apod-basic?per_page={entry_count}"
+
     responseJSON = http_get_json(apodURL)
     assert isinstance(responseJSON, list), "APOD response is not a list"
-    
+
+    # The new API's `url` is an article page, not an image. Only `hdurl` is downloadable.
+    entries = sorted(responseJSON, key=lambda entry: entry["date"], reverse=True)
     apodImageURLs = [
-        entry.get("hdurl") or entry.get("url")
-        for entry in responseJSON
-        if entry.get("media_type") == "image"
+        entry["hdurl"]
+        for entry in entries
+        if entry.get("media_type") == "image" and entry.get("hdurl")
     ]
     assert len(apodImageURLs) > 0, "No APOD images found"
-    
-    # reverse the list so that the most recent image is first
-    return list(reversed(apodImageURLs))
+
+    # most recent image first
+    return apodImageURLs
 
 def downloadImages(apodImageURLs):
     assert len(apodImageURLs) > 0, "No APOD images to download"
     
     def downloadImage(apodImageURL, tempDir):
-        imageName = apodImageURL.split("/")[-1]
+        imageName = urllib.parse.unquote(
+            os.path.basename(urllib.parse.urlparse(apodImageURL).path)
+        )
         dest = os.path.join(tempDir, imageName)
         if os.path.exists(dest):
             return dest
@@ -128,7 +131,12 @@ def createCombinedWallpaper(pathsToImages, monitors):
         img = img.crop((left, top, left + m["w"], top + m["h"]))
         canvas.paste(img, (m["x"], m["y"]))
 
-    combined_path = os.path.join(IMAGES_PATH, "combined_wallpaper.jpg")
+    # Use a new filename every run: setting picture-uri to its current value is
+    # a no-op, so GNOME would keep showing its cached (or fallback) image.
+    os.makedirs(WALLPAPERS_PATH, exist_ok=True)
+    for old in os.listdir(WALLPAPERS_PATH):
+        os.remove(os.path.join(WALLPAPERS_PATH, old))
+    combined_path = os.path.join(WALLPAPERS_PATH, f"combined_wallpaper_{int(time.time())}.jpg")
     canvas.save(combined_path, quality=95)
     return combined_path
 
@@ -182,10 +190,11 @@ def main():
     assert len(monitors) > 0, "No monitors detected"
     print(f"Detected {len(monitors)} monitors")
 
-    # look back a few extra days in case the APOD is a video
-    number_of_days_to_look_back = len(monitors) + 2
-    
-    apodImageURLs = getAPODImageURLs(datetime.datetime.now(), number_of_days_to_look_back)
+    # request two spare entries because some APOD entries are videos
+    entry_count = len(monitors) + 2
+    print(f"Fetching {entry_count} recent APOD entries")
+
+    apodImageURLs = getAPODImageURLs(entry_count)
     print(f"Found {len(apodImageURLs)} images to download")
 
     pathsToImages = downloadImages(apodImageURLs)
